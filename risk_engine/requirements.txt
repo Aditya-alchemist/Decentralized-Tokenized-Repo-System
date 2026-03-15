@@ -1,0 +1,10 @@
+numpy
+pandas
+scipy
+matplotlib
+requests
+web3
+python-dotenv
+jupyter
+quantlib
+pytest

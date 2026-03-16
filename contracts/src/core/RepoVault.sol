@@ -8,6 +8,22 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../libraries/RepoMath.sol";
 import "../oracle/BondPriceOracle.sol";
 
+interface ILendingPool {
+    function receiveRepayment(uint256 principal, uint256 interest) external;
+    function creditLiquidation(uint256 repoId, uint256 amount) external;
+}
+
+interface IRepoSettlement {
+    function createTicket(
+        address seller,
+        address buyer,
+        uint256 bondAmount,
+        uint256 cashAmount,
+        uint256 expirySeconds
+    ) external returns (uint256);
+    function executeSettlement(uint256 ticketId) external;
+}
+
 /// @title RepoVault
 /// @notice The core contract of the entire system.
 ///         Locks tTBILL collateral, opens repos, handles repayment,
@@ -15,7 +31,6 @@ import "../oracle/BondPriceOracle.sol";
 contract RepoVault is ReentrancyGuard, Ownable, Pausable {
 
     // ─── Struct ──────────────────────────────────────────────────
-    /// @notice Stores every detail about a single repo position
     struct RepoPosition {
         address borrower;
         uint256 collateralAmount;   // tTBILL locked (18 decimals)
@@ -30,20 +45,21 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         uint256 marginCallDeadline; // borrower must respond before this
     }
 
-    // ─── State Variables ─────────────────────────────────────────
-    IERC20          public immutable tTBILL;  // the bond token (collateral)
-    IERC20          public immutable USDC;    // the loan token
-    BondPriceOracle public immutable oracle;  // fetches live bond price
+    // ─── State ───────────────────────────────────────────────────
+    IERC20          public immutable tTBILL;
+    IERC20          public immutable USDC;
+    BondPriceOracle public immutable oracle;
 
-    address public marginEngine;  // set once after deployment
-    address public lendingPool;   // set once after deployment
+    address public marginEngine;
+    address public lendingPool;
+    address public repoSettlement;   // ← ADDED
 
-    uint256 public nextRepoId;                          // auto-incrementing ID
-    uint256 public marginCallWindowSeconds = 4 hours;   // borrower response window
-    uint256 public liquidationPenaltyBps   = 200;       // 2% penalty on surplus
+    uint256 public nextRepoId;
+    uint256 public marginCallWindowSeconds = 4 hours;
+    uint256 public liquidationPenaltyBps   = 200;
 
-    mapping(uint256 => RepoPosition) public repos;          // repoId → position
-    mapping(address => uint256[])    public borrowerRepos;  // wallet → list of repoIds
+    mapping(uint256 => RepoPosition) public repos;
+    mapping(address => uint256[])    public borrowerRepos;
 
     // ─── Events ──────────────────────────────────────────────────
     event RepoOpened(
@@ -58,14 +74,8 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         address indexed borrower,
         uint256 totalRepaid
     );
-    event MarginCallIssued(
-        uint256 indexed repoId,
-        uint256 deadline
-    );
-    event MarginCallMet(
-        uint256 indexed repoId,
-        uint256 additionalCollateral
-    );
+    event MarginCallIssued(uint256 indexed repoId, uint256 deadline);
+    event MarginCallMet(uint256 indexed repoId, uint256 additionalCollateral);
     event Liquidated(
         uint256 indexed repoId,
         uint256 saleProceeds,
@@ -95,36 +105,35 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         require(_tTBILL != address(0), "Zero address: tTBILL");
         require(_USDC   != address(0), "Zero address: USDC");
         require(_oracle != address(0), "Zero address: oracle");
-
         tTBILL = IERC20(_tTBILL);
         USDC   = IERC20(_USDC);
         oracle = BondPriceOracle(_oracle);
     }
 
     // ─── One-Time Setup ──────────────────────────────────────────
-
-    /// @notice Links MarginEngine — called once in Deploy.s.sol
     function setMarginEngine(address _engine) external onlyOwner {
         require(marginEngine == address(0), "Already set");
-        require(_engine != address(0),      "Zero address");
+        require(_engine      != address(0), "Zero address");
         marginEngine = _engine;
     }
 
-    /// @notice Links LendingPool — called once in Deploy.s.sol
     function setLendingPool(address _pool) external onlyOwner {
         require(lendingPool == address(0), "Already set");
-        require(_pool != address(0),       "Zero address");
+        require(_pool       != address(0), "Zero address");
         lendingPool = _pool;
+    }
+
+    /// @notice Links RepoSettlement — called once in Deploy.s.sol
+    function setRepoSettlement(address _settlement) external onlyOwner {
+        require(repoSettlement == address(0), "Already set");
+        require(_settlement    != address(0), "Zero address");
+        repoSettlement = _settlement;
     }
 
     // ─── OPEN REPO ───────────────────────────────────────────────
 
     /// @notice Opens a new repo position
     /// @dev    Called ONLY by LendingPool after it has already sent USDC to borrower
-    ///         Flow: Borrower calls LendingPool.requestRepo()
-    ///               LendingPool sends USDC → Borrower
-    ///               LendingPool calls RepoVault.openRepo()
-    ///               RepoVault pulls tTBILL from Borrower into Vault
     function openRepo(
         address _borrower,
         uint256 _collateralAmount,
@@ -135,32 +144,26 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
     ) external onlyLendingPool nonReentrant whenNotPaused returns (uint256 repoId) {
 
         require(_borrower         != address(0), "Zero address: borrower");
-        require(_collateralAmount  > 0,          "Zero collateral");
-        require(_loanAmount        > 0,          "Zero loan");
-        require(_termDays          > 0,          "Zero term");
+        require(_collateralAmount  > 0,           "Zero collateral");
+        require(_loanAmount        > 0,           "Zero loan");
+        require(_termDays          > 0,           "Zero term");
 
-        // ── Step 1: Validate LTV using live oracle price ──────────
-        // bondPrice has 8 decimals (e.g. 98000000 = $980.00)
+        // Validate LTV using live oracle price
         uint256 bondPrice     = oracle.getLatestPrice();
-
-        // Convert collateral value to USDC terms (6 decimals)
         uint256 collateralVal = RepoMath.bondValueInUSDC(
             _collateralAmount,
             bondPrice
         );
-
-        // Check that loan does not exceed max allowed by haircut
         uint256 maxLoan = RepoMath.maxLoanAmount(collateralVal, _haircutBps);
-        require(_loanAmount <= maxLoan, "Loan amount exceeds max LTV");
+        require(_loanAmount <= maxLoan, "Loan exceeds max LTV");
 
-        // ── Step 2: Pull tTBILL collateral from borrower ──────────
-        // Borrower must have called tTBILL.approve(repoVault, amount) first
+        // Pull tTBILL collateral from borrower into vault
         require(
             tTBILL.transferFrom(_borrower, address(this), _collateralAmount),
             "Collateral transfer failed"
         );
 
-        // ── Step 3: Record the position ───────────────────────────
+        // Record the position
         repoId = nextRepoId++;
 
         repos[repoId] = RepoPosition({
@@ -190,17 +193,22 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
 
     // ─── REPAY ───────────────────────────────────────────────────
 
-    /// @notice Borrower repays loan + interest, gets their tTBILL back
-    /// @dev    Borrower must approve USDC to this contract before calling
+    /// @notice Borrower repays loan + interest, gets tTBILL back atomically
+    /// @dev    FIX 1: Uses RepoSettlement for atomic DVP instead of sequential transfers
+    ///         FIX 2: Calls receiveRepayment() so LendingPool updates totalLoaned
+    ///
+    ///         Borrower must approve USDC    to RepoSettlement before calling
+    ///         This vault approves   tTBILL  to RepoSettlement inside this function
     function repayRepo(uint256 repoId)
         external nonReentrant whenNotPaused
     {
         RepoPosition storage pos = repos[repoId];
 
         require(pos.isActive,               "Repo is not active");
-        require(pos.borrower == msg.sender,  "You did not open this repo");
+        require(pos.borrower == msg.sender, "You did not open this repo");
+        require(repoSettlement != address(0), "Settlement not configured");
 
-        // ── Calculate total owed ──────────────────────────────────
+        // Calculate total owed
         uint256 interest  = RepoMath.repoInterest(
             pos.loanAmount,
             pos.repoRateBps,
@@ -208,28 +216,40 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         );
         uint256 totalOwed = pos.loanAmount + interest;
 
-        // ── Pull repayment USDC from borrower → LendingPool ───────
-        require(
-            USDC.transferFrom(msg.sender, lendingPool, totalOwed),
-            "USDC repayment failed"
+        // ── CEI: Close position BEFORE any external calls ─────────
+        uint256 collateralToReturn = pos.collateralAmount;
+        address borrower           = pos.borrower;
+        pos.isActive               = false;
+
+        // ── Approve RepoSettlement to move our tTBILL ─────────────
+        tTBILL.approve(repoSettlement, collateralToReturn);
+
+        // ── Create DVP settlement ticket ──────────────────────────
+        // seller = this vault  (delivers tTBILL → borrower)
+        // buyer  = borrower    (delivers USDC   → lendingPool)
+        uint256 ticketId = IRepoSettlement(repoSettlement).createTicket(
+            address(this),       // seller: vault delivers tTBILL
+            borrower,            // buyer:  borrower delivers USDC
+            collateralToReturn,  // bond leg
+            totalOwed,           // cash leg
+            1 hours              // ticket expiry
         );
 
-        // ── Return tTBILL collateral to borrower ──────────────────
-        require(
-            tTBILL.transfer(pos.borrower, pos.collateralAmount),
-            "Collateral return failed"
-        );
+        // ── Execute atomic DVP ────────────────────────────────────
+        // Leg 1: tTBILL vault    → borrower      (collateral returned)
+        // Leg 2: USDC   borrower → lendingPool   (loan + interest paid)
+        // If either leg fails → entire tx reverts atomically
+        IRepoSettlement(repoSettlement).executeSettlement(ticketId);
 
-        // ── Close the position ────────────────────────────────────
-        pos.isActive = false;
+        // ── Tell LendingPool to update totalLoaned ────────────────
+        ILendingPool(lendingPool).receiveRepayment(pos.loanAmount, interest);
 
-        emit RepoClosed(repoId, msg.sender, totalOwed);
+        emit RepoClosed(repoId, borrower, totalOwed);
     }
 
     // ─── MARGIN CALL: ISSUE ──────────────────────────────────────
 
-    /// @notice MarginEngine calls this when LTV breaches 90% threshold
-    /// @dev    Gives borrower a 4-hour window to top up collateral
+    /// @notice MarginEngine calls this when LTV breaches 90%
     function issueMarginCall(uint256 repoId)
         external onlyMarginEngine
     {
@@ -246,8 +266,7 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
 
     // ─── MARGIN CALL: MEET ───────────────────────────────────────
 
-    /// @notice Borrower deposits extra tTBILL to bring LTV back to safety
-    /// @dev    Must be called before marginCallDeadline expires
+    /// @notice Borrower tops up collateral to clear the margin call
     function meetMarginCall(
         uint256 repoId,
         uint256 additionalCollateral
@@ -256,16 +275,15 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
 
         require(pos.isActive,                              "Repo is not active");
         require(pos.marginCallActive,                      "No margin call active");
-        require(block.timestamp <= pos.marginCallDeadline, "Margin call window expired");
+        require(block.timestamp <= pos.marginCallDeadline, "Window expired");
+        require(pos.borrower == msg.sender,                "Not your repo");
         require(additionalCollateral > 0,                  "Zero collateral");
 
-        // Pull extra tTBILL from borrower into vault
         require(
             tTBILL.transferFrom(msg.sender, address(this), additionalCollateral),
             "Top-up transfer failed"
         );
 
-        // Update position
         pos.collateralAmount  += additionalCollateral;
         pos.marginCallActive   = false;
         pos.marginCallDeadline = 0;
@@ -275,16 +293,19 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
 
     // ─── LIQUIDATION ─────────────────────────────────────────────
 
-    /// @notice MarginEngine calls this when:
-    ///         1. Margin call window expires without borrower topping up, OR
-    ///         2. LTV jumps directly above 95% (critical — no time for margin call)
+    /// @notice MarginEngine calls this when LTV hits 95% or margin call expires
+    /// @dev    FIX 1: USDC.transfer(lendingPool) added — was missing before
+    ///         FIX 2: Uses ILendingPool interface instead of raw .call()
+    ///         ⚠️  TODO: tTBILL → USDC swap not yet integrated
+    ///                   Currently assumes USDC is available in vault
+    ///                   Must integrate Uniswap swap before mainnet
     function liquidate(uint256 repoId)
         external onlyMarginEngine nonReentrant
     {
         RepoPosition storage pos = repos[repoId];
         require(pos.isActive, "Repo is not active");
 
-        // ── Calculate what borrower owes ──────────────────────────
+        // Calculate what borrower owes
         uint256 interest  = RepoMath.repoInterest(
             pos.loanAmount,
             pos.repoRateBps,
@@ -292,14 +313,14 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         );
         uint256 totalOwed = pos.loanAmount + interest;
 
-        // ── Value the collateral at current oracle price ───────────
+        // Value collateral at current oracle price
         uint256 bondPrice    = oracle.getLatestPrice();
         uint256 saleProceeds = RepoMath.bondValueInUSDC(
             pos.collateralAmount,
             bondPrice
         );
 
-        // ── Split the proceeds ────────────────────────────────────
+        // Split proceeds
         (
             uint256 lenderAmount,
             uint256 borrowerSurplus,
@@ -310,24 +331,27 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
             liquidationPenaltyBps
         );
 
-        // ── Close the position BEFORE any transfers ───────────────
-        // This follows the Checks-Effects-Interactions pattern
-        // Prevents reentrancy attacks
-        pos.isActive = false;
+        // ── CEI: Close position BEFORE any transfers ──────────────
+        address borrower = pos.borrower;
+        pos.isActive     = false;
 
-        // ── Credit LendingPool with lender's share ────────────────
-        (bool ok,) = lendingPool.call(
-            abi.encodeWithSignature(
-                "creditLiquidation(uint256,uint256)",
-                repoId,
-                lenderAmount
-            )
+        // ── Send USDC to LendingPool ──────────────────────────────
+        // FIX: This was completely missing in original contract
+        require(
+            USDC.transfer(lendingPool, lenderAmount),
+            "USDC transfer to LendingPool failed"
         );
-        require(ok, "Liquidation credit to LendingPool failed");
 
-        // ── Return any surplus to borrower ────────────────────────
+        // ── Update LendingPool accounting ─────────────────────────
+        // FIX: Use interface instead of raw .call() — type safe
+        ILendingPool(lendingPool).creditLiquidation(repoId, lenderAmount);
+
+        // ── Return surplus to borrower if any ─────────────────────
         if (borrowerSurplus > 0) {
-            USDC.transfer(pos.borrower, borrowerSurplus);
+            require(
+                USDC.transfer(borrower, borrowerSurplus),
+                "Surplus transfer failed"
+            );
         }
 
         emit Liquidated(
@@ -339,23 +363,19 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         );
     }
 
-    // ─── VIEW FUNCTIONS ──────────────────────────────────────────
-
-    /// @notice Get full details of a repo position
+    // ─── VIEWS ───────────────────────────────────────────────────
     function getRepo(uint256 repoId)
         external view returns (RepoPosition memory)
     {
         return repos[repoId];
     }
 
-    /// @notice Get all repo IDs opened by a specific borrower
     function getBorrowerRepos(address borrower)
         external view returns (uint256[] memory)
     {
         return borrowerRepos[borrower];
     }
 
-    /// @notice Get current USDC value of a repo's collateral
     function getCollateralValue(uint256 repoId)
         external view returns (uint256)
     {
@@ -364,7 +384,6 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         return RepoMath.bondValueInUSDC(pos.collateralAmount, bondPrice);
     }
 
-    /// @notice Get total USDC owed for a repo (principal + interest)
     function getTotalOwed(uint256 repoId)
         external view returns (uint256)
     {
@@ -377,7 +396,6 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
         return pos.loanAmount + interest;
     }
 
-    /// @notice Check if a repo is currently safe (collateral covers loan)
     function isPositionSafe(uint256 repoId)
         external view returns (bool)
     {
@@ -396,7 +414,6 @@ contract RepoVault is ReentrancyGuard, Ownable, Pausable {
     }
 
     // ─── ADMIN ───────────────────────────────────────────────────
-
     function pause()   external onlyOwner { _pause(); }
     function unpause() external onlyOwner { _unpause(); }
 

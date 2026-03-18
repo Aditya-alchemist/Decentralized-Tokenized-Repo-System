@@ -93,7 +93,7 @@ contract LendingPool is ReentrancyGuard, Ownable, Pausable {
         uint256 usdcOut = _sharesToUSDC(shareAmount);
         require(
             USDC.balanceOf(address(this)) >= usdcOut,
-            "Insufficient liquidity — wait for repayments"
+            "Insufficient liquidity wait for repayments"
         );
 
         // CEI: burn shares BEFORE transfer

@@ -148,10 +148,10 @@ contract RepoSettlement is ReentrancyGuard, Ownable {
         // ── Leg 2: Cash payment (buyer → seller) ──────────────────
         // If this fails → ENTIRE transaction reverts including Leg 1
         // Atomic settlement guaranteed by EVM
-        require(
-            USDC.transferFrom(t.buyer, t.seller, t.cashAmount),
-            "Cash leg failed"
-        );
+      require(
+    USDC.transferFrom(t.buyer, lendingPool, t.cashAmount),
+    "Cash leg failed"
+);
 
         emit SettlementExecuted(ticketId, t.bondAmount, t.cashAmount);
     }

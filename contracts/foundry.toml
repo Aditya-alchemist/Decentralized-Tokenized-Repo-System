@@ -2,13 +2,13 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+via_ir = true
 
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@chainlink/=lib/chainlink-brownie-contracts/"
 ]
 
-[profile.default]
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

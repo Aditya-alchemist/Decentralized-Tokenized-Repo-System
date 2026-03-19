@@ -27,44 +27,38 @@ contract Deploy is Script {
         vm.startBroadcast(deployerKey);
 
         // ─── 1. MockTBill ─────────────────────────────────────────
-        // constructor(name, symbol, isin, faceValue, couponRateBps, maturityDate, admin)
         MockTBill tTBILL = new MockTBill(
-            "Mock T-Bill",        // name
-            "tTBILL",             // symbol
-            "US912796YT68",       // isin (example)
-            1000 * 1e6,           // faceValue $1000 (6 decimals)
-            500,                  // couponRateBps 5%
-            block.timestamp + 365 days, // maturityDate 1 year from now
-            deployer              // admin
+            "Mock T-Bill",
+            "tTBILL",
+            "US912796YT68",
+            1000 * 1e6,
+            500,
+            block.timestamp + 365 days,
+            deployer
         );
         console.log("MockTBill:      ", address(tTBILL));
 
         // ─── 2. MockUSDC ──────────────────────────────────────────
-        // Reuse MockTBill contract as mock USDC
         MockTBill USDC = new MockTBill(
-            "Mock USDC",          // name
-            "USDC",               // symbol
-            "USDC-MOCK",          // isin placeholder
-            1 * 1e6,              // faceValue $1
-            0,                    // couponRateBps 0%
-            block.timestamp + 365 days, // maturityDate
-            deployer              // admin
+            "Mock USDC",
+            "USDC",
+            "USDC-MOCK",
+            1 * 1e6,
+            0,
+            block.timestamp + 365 days,
+            deployer
         );
         console.log("MockUSDC:       ", address(USDC));
 
         // ─── 3. RepoPoolToken ─────────────────────────────────────
-        // constructor(address _initialOwner)
         RepoPoolToken rpUSDC = new RepoPoolToken(deployer);
         console.log("RepoPoolToken:  ", address(rpUSDC));
 
         // ─── 4. BondPriceOracle ───────────────────────────────────
-        // constructor(address initialOwner)
-        // keeper bot = deployer for now, update later to keeper wallet
         BondPriceOracle oracle = new BondPriceOracle(deployer);
         console.log("BondPriceOracle:", address(oracle));
 
         // ─── 5. RepoVault ─────────────────────────────────────────
-        // constructor(address _tTBILL, address _USDC, address _oracle, address _initialOwner)
         RepoVault repoVault = new RepoVault(
             address(tTBILL),
             address(USDC),
@@ -74,7 +68,6 @@ contract Deploy is Script {
         console.log("RepoVault:      ", address(repoVault));
 
         // ─── 6. LendingPool ───────────────────────────────────────
-        // constructor(address _USDC, address _rpUSDC, address _initialOwner)
         LendingPool lendingPool = new LendingPool(
             address(USDC),
             address(rpUSDC),
@@ -83,7 +76,6 @@ contract Deploy is Script {
         console.log("LendingPool:    ", address(lendingPool));
 
         // ─── 7. MarginEngine ──────────────────────────────────────
-        // constructor(address _oracle, address _vault, address _initialOwner)
         MarginEngine marginEngine = new MarginEngine(
             address(oracle),
             address(repoVault),
@@ -92,7 +84,6 @@ contract Deploy is Script {
         console.log("MarginEngine:   ", address(marginEngine));
 
         // ─── 8. RepoSettlement ────────────────────────────────────
-        // constructor(address _tTBILL, address _USDC, address _initialOwner)
         RepoSettlement repoSettlement = new RepoSettlement(
             address(tTBILL),
             address(USDC),
@@ -115,18 +106,31 @@ contract Deploy is Script {
         console.log("RepoSettlement wired");
 
         // ─── 10. Set initial oracle price ─────────────────────────
-        // $980.00 → 8 decimals → 98_000_000
-        oracle.updatePrice(98_000_000);
-        console.log("Oracle price set to $980.00");
+        // FIX: $980.00 in 8 decimals = 980 × 1e8 = 98_000_000_000
+        // Previous value 98_000_000 = only $0.98 — caused LTV failures
+        oracle.updatePrice(98_000_000_000);
+        console.log("Oracle price set to $980.00 (98_000_000_000)");
 
-        // ─── 11. Grant LendingPool minter role on rpUSDC ──────────
-        // RepoPoolToken uses setLendingPool() not setMinter()
+        // ─── 11. Grant rpUSDC minter to LendingPool ───────────────
         rpUSDC.setLendingPool(address(lendingPool));
         console.log("rpUSDC minter set to LendingPool");
 
+        // ─── 12. KYC whitelist all protocol contracts ─────────────
+        // MockTBill enforces KYC on every transfer sender + recipient
+        // All core contracts must be whitelisted or transfers revert
+        tTBILL.grantKYC(address(lendingPool));
+        tTBILL.grantKYC(address(repoVault));
+        tTBILL.grantKYC(address(repoSettlement));
+
+        USDC.grantKYC(address(lendingPool));
+        USDC.grantKYC(address(repoVault));
+        USDC.grantKYC(address(repoSettlement));
+
+        console.log("KYC granted to LendingPool, RepoVault, RepoSettlement");
+
         vm.stopBroadcast();
 
-        // ─── 12. Write addresses.json ─────────────────────────────
+        // ─── 13. Write addresses.json ─────────────────────────────
         string memory json = string(abi.encodePacked(
             '{\n',
             '  "MockTBill":       "', vm.toString(address(tTBILL)),         '",\n',

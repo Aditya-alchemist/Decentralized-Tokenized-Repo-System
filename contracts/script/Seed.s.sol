@@ -104,29 +104,6 @@ contract Seed is Script {
 
         vm.stopBroadcast();
 
-        // ─── Step 5: Print full system state ──────────────────────
-        console.log("\n========== SYSTEM STATE ==========");
-
-        console.log("-- Oracle --");
-        console.log("bondPrice:         ", oracle.getLatestPrice(), "(8 dec, $980.00)");
-
-        console.log("\n-- LendingPool --");
-        console.log("totalPoolValue:    ", lendingPool.totalPoolValue()     / 1e6, "USDC");
-        console.log("availableLiquidity:", lendingPool.availableLiquidity() / 1e6, "USDC");
-        console.log("totalLoaned:       ", lendingPool.totalLoaned()        / 1e6, "USDC");
-        console.log("sharePrice:        ", lendingPool.sharePrice(),              "(1e6=$1.00)");
-
-        (uint256 shares, uint256 usdcVal) = lendingPool.getLenderBalance(deployer);
-        console.log("\n-- Lender (deployer) --");
-        console.log("rpUSDC shares:     ", shares  / 1e6);
-        console.log("USDC value:        ", usdcVal / 1e6, "USDC");
-
-        console.log("\n-- Repo Position --");
-        console.log("repoId:            ", repoId);
-        console.log("totalOwed:         ", repoVault.getTotalOwed(repoId)       / 1e6, "USDC");
-        console.log("collateralValue:   ", repoVault.getCollateralValue(repoId) / 1e6, "USDC");
-        console.log("isPositionSafe:    ", repoVault.isPositionSafe(repoId));
-
         console.log("\n===================================");
         console.log("SEED COMPLETE");
         console.log("===================================");

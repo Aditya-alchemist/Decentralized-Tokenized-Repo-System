@@ -1,0 +1,10 @@
+2026-03-21 19:23:22,733 | INFO | Fetched FRED DGS3MO yield=3.7300% as_of=2026-03-19 fetched_at=2026-03-21T13:53:22Z -> price_8dp=99076115226
+2026-03-21 19:23:50,397 | INFO | Fetched FRED DGS3MO yield=3.7300% as_of=2026-03-19 fetched_at=2026-03-21T13:53:50Z -> price_8dp=99076115226
+2026-03-21 19:24:00,731 | INFO | Oracle updated. tx_hash=dc12ef0afc2e2d988d639427decf896b7acf56fd1b0c42358e07b6275d744f8b (first write or stale/unknown oracle state)
+2026-03-21 19:24:11,672 | INFO | Margin check executed. tx_hash=0d128f78a585ce66f341da90cd7a71e637239c9539da41acfda5e02acd4cc74c active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 19:25:54,655 | INFO | Fetched FRED DGS3MO yield=3.7300% as_of=2026-03-19 fetched_at=2026-03-21T13:55:54Z -> price_8dp=99076115226
+2026-03-21 19:25:55,281 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 19:25:59,485 | INFO | Margin check executed. tx_hash=e665609be4ffe556023d8ade6cbf2aa43acab42d9d81ed648d6ac4f2a45c7505 active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 20:56:51,521 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T15:26:51Z -> price_8dp=99717666667
+2026-03-21 20:56:59,454 | INFO | Oracle updated. tx_hash=8a73a1a62917beb0cca779bdccc533e4a201ca28957695f1c2b84b182096c793 (change_bps=64.7534, threshold=10, stale_floor_hit=True)
+2026-03-21 20:57:12,101 | INFO | Margin check executed. tx_hash=43d6a3246f81513e77fe7dd2a650dcf179e8854ec6ff78806dfa9a5f9a234ede active_repos=[0] healthy=1 margin_calls=0 liquidations=0

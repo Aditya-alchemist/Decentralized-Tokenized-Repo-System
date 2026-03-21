@@ -1,13 +1,48 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+:root {
+  --ink: #1f1d1a;
+  --ink-shadow: #59534a;
+  --paper: #f6f3ea;
+  --muted: #6a645a;
+  --blue: #b8d7ec;
+  --accent: #bc7eaf;
+  --yellow: #efd95a;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+html {
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: 'VT323', monospace;
+  background:
+    linear-gradient(rgba(40, 40, 40, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40, 40, 40, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, #eff5fb 0%, #f6f3ea 100%);
+  background-size: 28px 28px, 28px 28px, cover;
+}
+
+h1,
+h2,
+h3,
+h4,
+.top-nav,
+.retro-btn {
+  font-family: 'Press Start 2P', cursive;
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  font-size: 0.98rem;
+}
+
+h3 {
+  font-size: 0.82rem;
 }

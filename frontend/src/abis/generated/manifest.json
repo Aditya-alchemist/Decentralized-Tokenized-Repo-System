@@ -1,0 +1,54 @@
+﻿{
+    "generatedAt":  "2026-03-21T13:40:41.0139720Z",
+    "source":  "contracts/out",
+    "contracts":  [
+                      {
+                          "name":  "MockTBill",
+                          "address":  "0x7B2a668e288bc8f668B709ac5558B851Cf54B113",
+                          "abiFile":  "./MockTBill.json",
+                          "artifactContract":  "MockTBill"
+                      },
+                      {
+                          "name":  "MockUSDC",
+                          "address":  "0x38C56C2E22D316249BdCF8C521FEF65d5D8573b8",
+                          "abiFile":  "./MockUSDC.json",
+                          "artifactContract":  "MockTBill"
+                      },
+                      {
+                          "name":  "RepoPoolToken",
+                          "address":  "0x90e48C8116b69dA6A2f353940A85829c3997aD65",
+                          "abiFile":  "./RepoPoolToken.json",
+                          "artifactContract":  "RepoPoolToken"
+                      },
+                      {
+                          "name":  "BondPriceOracle",
+                          "address":  "0xACc9099c4e9f797f1b96559007BB2a0E0A20368A",
+                          "abiFile":  "./BondPriceOracle.json",
+                          "artifactContract":  "BondPriceOracle"
+                      },
+                      {
+                          "name":  "RepoVault",
+                          "address":  "0x2175633Fd0bd9D172ee36A6755e8F6A99301a347",
+                          "abiFile":  "./RepoVault.json",
+                          "artifactContract":  "RepoVault"
+                      },
+                      {
+                          "name":  "LendingPool",
+                          "address":  "0x3786c0952F33814A96F57a1Ee75c265E5F80e247",
+                          "abiFile":  "./LendingPool.json",
+                          "artifactContract":  "LendingPool"
+                      },
+                      {
+                          "name":  "MarginEngine",
+                          "address":  "0x206e609B5CB8bf43FFD1ac1723bFFBd71cb99267",
+                          "abiFile":  "./MarginEngine.json",
+                          "artifactContract":  "MarginEngine"
+                      },
+                      {
+                          "name":  "RepoSettlement",
+                          "address":  "0x14038cB88dc2CB86A40e1f0B79E5898aAacc1935",
+                          "abiFile":  "./RepoSettlement.json",
+                          "artifactContract":  "RepoSettlement"
+                      }
+                  ]
+}

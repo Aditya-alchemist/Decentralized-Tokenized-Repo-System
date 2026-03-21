@@ -1,0 +1,46 @@
+﻿{
+    "generatedAt":  "2026-03-21T13:40:41.2386286Z",
+    "source":  "contracts/src + contracts/out",
+    "contracts":  [
+                      {
+                          "name":  "LendingPool",
+                          "source":  "src/core/LendingPool.sol",
+                          "abiFile":  "./LendingPool.json"
+                      },
+                      {
+                          "name":  "MarginEngine",
+                          "source":  "src/core/MarginEngine.sol",
+                          "abiFile":  "./MarginEngine.json"
+                      },
+                      {
+                          "name":  "RepoSettlement",
+                          "source":  "src/core/RepoSettlement.sol",
+                          "abiFile":  "./RepoSettlement.json"
+                      },
+                      {
+                          "name":  "RepoVault",
+                          "source":  "src/core/RepoVault.sol",
+                          "abiFile":  "./RepoVault.json"
+                      },
+                      {
+                          "name":  "RepoMath",
+                          "source":  "src/libraries/RepoMath.sol",
+                          "abiFile":  "./RepoMath.json"
+                      },
+                      {
+                          "name":  "BondPriceOracle",
+                          "source":  "src/oracle/BondPriceOracle.sol",
+                          "abiFile":  "./BondPriceOracle.json"
+                      },
+                      {
+                          "name":  "MockTBill",
+                          "source":  "src/tokens/MockTBill.sol",
+                          "abiFile":  "./MockTBill.json"
+                      },
+                      {
+                          "name":  "RepoPoolToken",
+                          "source":  "src/tokens/RepoPoolToken.sol",
+                          "abiFile":  "./RepoPoolToken.json"
+                      }
+                  ]
+}

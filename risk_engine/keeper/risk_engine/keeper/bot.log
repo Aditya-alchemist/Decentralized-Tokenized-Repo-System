@@ -1,0 +1,15 @@
+2026-03-21 04:54:59,830 | INFO | Keeper bot started. interval=1800s
+2026-03-21 04:55:01,591 | INFO | Fetched FRED DGS3MO yield=3.7300% as_of=2026-03-19 fetched_at=2026-03-21T13:55:01Z -> price_8dp=99076115226
+2026-03-21 04:55:02,490 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 04:55:12,952 | INFO | Margin check executed. tx_hash=2c63db7927eaec75732444b7f98573b5c2ddddbd3af9161e725f890708a21eaa active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 20:45:01,107 | INFO | Fetched FRED DGS3MO yield=3.7300% as_of=2026-03-19 fetched_at=2026-03-21T15:15:01Z -> price_8dp=99076115226
+2026-03-21 20:45:01,808 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 20:45:11,584 | INFO | Margin check executed. tx_hash=fe9c77de7c50c4dc67be8fe8ec1f9373a1a88cdb1055f667c4d4554c72679602 active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 06:16:03,825 | INFO | Keeper bot started. interval=1800s
+2026-03-21 06:16:05,731 | INFO | Fetched FRED DGS3MO yield=3.7300% as_of=2026-03-19 fetched_at=2026-03-21T15:16:05Z -> price_8dp=99076115226
+2026-03-21 06:16:06,934 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 06:16:11,350 | INFO | Margin check executed. tx_hash=a1495720a2bd947e4771df518da96d74d69be332379f2292df158464fea4fd24 active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 07:00:55,261 | INFO | Keeper bot started. interval=1800s
+2026-03-21 07:00:57,799 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T16:00:57Z -> price_8dp=99717666667
+2026-03-21 07:00:58,635 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 07:01:12,689 | INFO | Margin check executed. tx_hash=d7bb250bd5f283b9a9e5136dc1ee189a694bf5433fe937f6f2346522b5d9d3ef active_repos=[0] healthy=1 margin_calls=0 liquidations=0

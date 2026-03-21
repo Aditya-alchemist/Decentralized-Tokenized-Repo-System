@@ -83,8 +83,11 @@ Wall Street Repo is a **full-stack DeFi protocol** for institutional-grade repo 
 
 ## 📐 Architecture
 
+# Basic Architecture 
+
 <img width="747" height="793" alt="image" src="https://github.com/user-attachments/assets/78e339c7-0b2c-493d-a1f7-bd73fc847e46" />
 
+# Complex Architecture
 
 ```mermaid
 flowchart TB

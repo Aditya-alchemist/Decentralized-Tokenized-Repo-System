@@ -7,7 +7,10 @@ try:
     from risk_engine.keeper.config import load_config
     from risk_engine.keeper.margin_checker import MarginChecker
     from risk_engine.keeper.oracle_updater import OracleUpdater
-    from risk_engine.keeper.price_feed import get_latest_tbill_price_8dp
+    from risk_engine.keeper.price_feed import (
+        get_latest_tbill_price_8dp,
+        get_latest_tbill_price_8dp_smoothed,
+    )
 except ModuleNotFoundError:
     import sys
 
@@ -17,12 +20,15 @@ except ModuleNotFoundError:
         from risk_engine.keeper.config import load_config
         from risk_engine.keeper.margin_checker import MarginChecker
         from risk_engine.keeper.oracle_updater import OracleUpdater
-        from risk_engine.keeper.price_feed import get_latest_tbill_price_8dp
+        from risk_engine.keeper.price_feed import (
+            get_latest_tbill_price_8dp,
+            get_latest_tbill_price_8dp_smoothed,
+        )
     except ModuleNotFoundError:
         from config import load_config
         from margin_checker import MarginChecker
         from oracle_updater import OracleUpdater
-        from price_feed import get_latest_tbill_price_8dp
+        from price_feed import get_latest_tbill_price_8dp, get_latest_tbill_price_8dp_smoothed
 
 
 def _setup_logging(log_file_path: str) -> None:
@@ -47,20 +53,37 @@ def _relative_change_bps(new_value: int, old_value: int) -> float:
 
 def run_once() -> None:
     config = load_config()
-    oracle = OracleUpdater(config)
-    checker = MarginChecker(config)
 
-    price_8dp, yld, as_of_date, fetched_at = get_latest_tbill_price_8dp(config)
+    # Always fetch market data first; RPC is only required for on-chain reads/writes.
+    base_price_8dp, base_yld, as_of_date, fetched_at = get_latest_tbill_price_8dp(config)
     logging.info(
-        "Fetched FRED %s yield=%.4f%% as_of=%s fetched_at=%s -> price_8dp=%d",
+        "Fetched FRED %s (secondary=%s) yield=%.4f%% as_of=%s fetched_at=%s -> base_price_8dp=%d",
         config.fred_series_id,
-        yld,
+        config.fred_secondary_series_id or "none",
+        base_yld,
         as_of_date,
         fetched_at,
-        price_8dp,
+        base_price_8dp,
     )
 
+    try:
+        oracle = OracleUpdater(config)
+    except Exception as exc:
+        logging.warning(
+            "RPC unavailable; skipped on-chain oracle push and margin checks this cycle: %s",
+            exc,
+        )
+        return
+
+    checker = MarginChecker(config)
+
     current_onchain_price = oracle.get_latest_price()
+    price_8dp, yld, as_of_date, fetched_at = get_latest_tbill_price_8dp_smoothed(
+        config,
+        current_onchain_price_8dp=current_onchain_price,
+    )
+    logging.info("Smoothed target oracle price_8dp=%d (yield=%.4f%%)", price_8dp, yld)
+
     last_updated = oracle.get_last_updated()
     now_ts = int(time.time())
 
@@ -132,12 +155,15 @@ def main() -> None:
 
     logging.info("Keeper bot started. interval=%ss", interval)
     while True:
+        sleep_seconds = interval
         try:
             run_once()
         except Exception as exc:
             logging.exception("Keeper cycle failed: %s", exc)
+            sleep_seconds = max(1, int(config.failure_retry_seconds))
+            logging.info("Retrying keeper cycle in %ss", sleep_seconds)
 
-        time.sleep(interval)
+        time.sleep(sleep_seconds)
 
 
 if __name__ == "__main__":

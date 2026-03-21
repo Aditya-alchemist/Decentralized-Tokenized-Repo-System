@@ -13,3 +13,189 @@
 2026-03-21 07:00:57,799 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T16:00:57Z -> price_8dp=99717666667
 2026-03-21 07:00:58,635 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
 2026-03-21 07:01:12,689 | INFO | Margin check executed. tx_hash=d7bb250bd5f283b9a9e5136dc1ee189a694bf5433fe937f6f2346522b5d9d3ef active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 07:32:45,274 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T16:32:45Z -> price_8dp=99717666667
+2026-03-21 07:32:46,323 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 07:32:59,580 | INFO | Margin check executed. tx_hash=f543f6e9f715291690536506f108d84db43220a736c918fa7681efaa1ef8a85d active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 08:04:36,165 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T17:04:36Z -> price_8dp=99717666667
+2026-03-21 08:04:48,309 | INFO | Oracle updated. tx_hash=b749e1947f6b4e926a956f42ab7be7057e73a5c35920ef0fe86caf01479ae0bf (change_bps=0.0000, threshold=10, stale_floor_hit=True)
+2026-03-21 08:04:59,810 | INFO | Margin check executed. tx_hash=7ce5c6884d86c4869023e5d773ab387184905cf18a972716e74809a789f9ff8c active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 08:36:34,776 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T17:36:34Z -> price_8dp=99717666667
+2026-03-21 08:36:35,931 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 08:36:48,088 | INFO | Margin check executed. tx_hash=1f469513fb9daf728244900a1021b23d9fa0ca0607570789202abb0b06fa6c03 active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 09:08:00,668 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T18:08:00Z -> price_8dp=99717666667
+2026-03-21 09:08:01,962 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 09:08:11,925 | INFO | Margin check executed. tx_hash=fe272d5fe86611335c7735b317861a889e6aee3b833eda4ea767d88e1253776d active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 09:39:18,856 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T18:39:18Z -> price_8dp=99717666667
+2026-03-21 09:39:25,234 | INFO | Oracle updated. tx_hash=7e6a4da816da4b809153f0a16334d9e0439e6fef844407bd4e193c0ec1ed8c0a (change_bps=0.0000, threshold=10, stale_floor_hit=True)
+2026-03-21 09:39:35,613 | INFO | Margin check executed. tx_hash=64d99d29ffcc3d23efef07932c72255aeab6ab59cacd04986032aa781b892097 active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-21 10:23:40,282 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:24:12,899 | ERROR | Keeper cycle failed: Failed to connect to RPC endpoint
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 140, in main
+    run_once()
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 50, in run_once
+    oracle = OracleUpdater(config)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/oracle_updater.py", line 39, in __init__
+    raise ConnectionError("Failed to connect to RPC endpoint")
+ConnectionError: Failed to connect to RPC endpoint
+2026-03-21 10:27:36,312 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:28:46,945 | ERROR | Keeper cycle failed: Failed to connect to RPC endpoint https://eth-sepolia.g.alchemy.com after 3 attempts
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 141, in main
+    run_once()
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 50, in run_once
+    oracle = OracleUpdater(config)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/oracle_updater.py", line 56, in __init__
+    raise ConnectionError(
+ConnectionError: Failed to connect to RPC endpoint https://eth-sepolia.g.alchemy.com after 3 attempts
+2026-03-21 10:28:46,978 | INFO | Retrying keeper cycle in 60s
+2026-03-21 10:31:46,808 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:32:56,382 | ERROR | Keeper cycle failed: Failed to connect to any RPC endpoint after 3 attempts each
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 141, in main
+    run_once()
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 50, in run_once
+    oracle = OracleUpdater(config)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/oracle_updater.py", line 59, in __init__
+    raise ConnectionError(
+ConnectionError: Failed to connect to any RPC endpoint after 3 attempts each
+2026-03-21 10:32:56,438 | INFO | Retrying keeper cycle in 60s
+2026-03-21 10:35:08,276 | ERROR | Keeper cycle failed: Failed to connect to any RPC endpoint after 3 attempts each
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 141, in main
+    parser.add_argument(
+            ^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 50, in run_once
+    return float("inf")
+         ^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/oracle_updater.py", line 59, in __init__
+    raise ConnectionError(
+ConnectionError: Failed to connect to any RPC endpoint after 3 attempts each
+2026-03-21 10:35:08,307 | INFO | Retrying keeper cycle in 60s
+2026-03-21 10:35:26,396 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:35:47,925 | ERROR | Keeper cycle failed: HTTPSConnectionPool(host='api.stlouisfed.org', port=443): Read timed out. (read timeout=20)
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connection.py", line 796, in connect
+    sock_and_verified = _ssl_wrap_socket_and_match_hostname(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connection.py", line 975, in _ssl_wrap_socket_and_match_hostname
+    ssl_sock = ssl_wrap_socket(
+               ^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 483, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(sock, context, tls_in_tls, server_hostname)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 527, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/ssl.py", line 1042, in _create
+    self.do_handshake()
+  File "/usr/lib/python3.12/ssl.py", line 1320, in do_handshake
+    self._sslobj.do_handshake()
+TimeoutError: _ssl.c:983: The handshake operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/requests/adapters.py", line 644, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 490, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 466, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=conn.timeout)
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 367, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='api.stlouisfed.org', port=443): Read timed out. (read timeout=20)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 160, in main
+    run_once()
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 58, in run_once
+    base_price_8dp, base_yld, as_of_date, fetched_at = get_latest_tbill_price_8dp(config)
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/price_feed.py", line 67, in get_latest_tbill_price_8dp
+    primary_yld, primary_as_of = fetch_latest_yield_percent(
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/price_feed.py", line 22, in fetch_latest_yield_percent
+    response = requests.get(FRED_OBSERVATIONS_URL, params=params, timeout=20)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/requests/api.py", line 73, in get
+    return request("get", url, params=params, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/venv/lib/python3.12/site-packages/requests/adapters.py", line 690, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='api.stlouisfed.org', port=443): Read timed out. (read timeout=20)
+2026-03-21 10:35:48,118 | INFO | Retrying keeper cycle in 60s
+2026-03-21 10:36:40,337 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:37:12,056 | ERROR | Keeper cycle failed: Failed to connect to RPC endpoint
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 136, in main
+    run_once()
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 50, in run_once
+    oracle = OracleUpdater(config)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/oracle_updater.py", line 39, in __init__
+    raise ConnectionError("Failed to connect to RPC endpoint")
+ConnectionError: Failed to connect to RPC endpoint
+2026-03-21 10:37:46,779 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:38:17,114 | ERROR | Keeper cycle failed: Failed to connect to RPC endpoint
+Traceback (most recent call last):
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 136, in main
+    run_once()
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/bot.py", line 50, in run_once
+    oracle = OracleUpdater(config)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/KIIT0001/OneDrive/Desktop/Wall-street-repo/tokenized-repo-system/risk_engine/keeper/oracle_updater.py", line 39, in __init__
+    raise ConnectionError("Failed to connect to RPC endpoint")
+ConnectionError: Failed to connect to RPC endpoint
+2026-03-21 10:39:07,624 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:39:09,780 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T19:39:09Z -> price_8dp=99717666667
+2026-03-21 10:39:10,740 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-21 10:39:11,612 | INFO | No active repos found. Margin check skipped.
+2026-03-21 10:40:01,666 | INFO | Keeper bot started. interval=1800s
+2026-03-21 10:40:03,084 | INFO | Fetched FRED DTB3 (secondary=DTB4WK) yield=3.6235% as_of=2026-03-19 fetched_at=2026-03-21T19:40:03Z -> base_price_8dp=99718172222
+2026-03-21 10:40:05,566 | INFO | Smoothed target oracle price_8dp=99717995278 (yield=3.6258%)
+2026-03-21 10:40:05,907 | INFO | Oracle update skipped (change_bps=0.0330, threshold=2, stale_floor_hit=False)
+2026-03-21 10:40:06,577 | INFO | No active repos found. Margin check skipped.
+2026-03-21 11:06:09,126 | INFO | Keeper bot started. interval=1800s
+2026-03-21 11:06:10,615 | INFO | Fetched FRED DTB3 (secondary=DTB4WK) yield=3.6235% as_of=2026-03-19 fetched_at=2026-03-21T20:06:10Z -> base_price_8dp=99718172222
+2026-03-21 11:06:13,315 | INFO | Smoothed target oracle price_8dp=99717995278 (yield=3.6258%)
+2026-03-21 11:06:13,757 | INFO | Oracle update skipped (change_bps=0.0330, threshold=2, stale_floor_hit=False)
+2026-03-21 11:06:14,482 | INFO | No active repos found. Margin check skipped.
+2026-03-21 11:09:01,033 | INFO | Keeper bot started. interval=1800s
+2026-03-21 11:09:02,521 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T20:09:02Z -> base_price_8dp=99717938889
+2026-03-21 11:09:05,178 | INFO | Smoothed target oracle price_8dp=99717843611 (yield=3.6277%)
+2026-03-21 11:09:05,661 | INFO | Oracle update skipped (change_bps=0.0177, threshold=2, stale_floor_hit=False)
+2026-03-21 11:09:08,118 | INFO | No active repos found. Margin check skipped.

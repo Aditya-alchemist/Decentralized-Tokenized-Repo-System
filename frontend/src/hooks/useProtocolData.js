@@ -4,7 +4,9 @@ import { formatUnits } from 'viem';
 import { erc20Abi } from 'viem';
 import { CONTRACTS } from '../config/contracts';
 
-const HISTORY_STORAGE_KEY = 'trs_chart_history_v1';
+const HISTORY_STORAGE_KEY = 'trs_chart_history_v2';
+const LIVE_REFETCH_MS = 5000;
+const RPUSDC_DECIMALS = 6;
 
 const EMPTY_HISTORY = {
   poolLiquidity: [],
@@ -89,7 +91,7 @@ export function useProtocolData(address) {
 
   const { data: baseReads } = useReadContracts({
     allowFailure: true,
-    query: { refetchInterval: 15000 },
+    query: { refetchInterval: LIVE_REFETCH_MS },
     contracts: [
       {
         address: CONTRACTS.lendingPool.address,
@@ -157,7 +159,7 @@ export function useProtocolData(address) {
 
   const { data: repoReads } = useReadContracts({
     allowFailure: true,
-    query: { refetchInterval: 15000, enabled: repoContracts.length > 0 },
+    query: { refetchInterval: LIVE_REFETCH_MS, enabled: repoContracts.length > 0 },
     contracts: repoContracts,
   });
 
@@ -166,7 +168,7 @@ export function useProtocolData(address) {
     abi: CONTRACTS.repoVault.abi,
     functionName: 'getBorrowerRepos',
     args: address ? [address] : undefined,
-    query: { enabled: Boolean(address), refetchInterval: 15000 },
+    query: { enabled: Boolean(address), refetchInterval: LIVE_REFETCH_MS },
   });
 
   const userRepoIdList = useMemo(() => {
@@ -201,13 +203,13 @@ export function useProtocolData(address) {
 
   const { data: userRepoReads } = useReadContracts({
     allowFailure: true,
-    query: { enabled: userRepoContracts.length > 0, refetchInterval: 15000 },
+    query: { enabled: userRepoContracts.length > 0, refetchInterval: LIVE_REFETCH_MS },
     contracts: userRepoContracts,
   });
 
   const { data: userReads } = useReadContracts({
     allowFailure: true,
-    query: { enabled: Boolean(address), refetchInterval: 15000 },
+    query: { enabled: Boolean(address), refetchInterval: LIVE_REFETCH_MS },
     contracts: address
       ? [
           {
@@ -291,6 +293,9 @@ export function useProtocolData(address) {
         totalOwed: toNumber(totalOwed, 6),
         totalOwedRaw: totalOwed,
         ltv,
+        openedAt: Number(repo.openedAt ?? 0n),
+        maturityDate: Number(repo.maturityDate ?? 0n),
+        termDays: Number(repo.termDays ?? 0n),
         isActive: Boolean(repo.isActive),
         marginCallActive: Boolean(repo.marginCallActive),
         marginCallDeadline: Number(repo.marginCallDeadline ?? 0n),
@@ -326,7 +331,8 @@ export function useProtocolData(address) {
   const user = useMemo(() => {
     const usdcBalance = toNumber(userReads?.[0]?.result, 6);
     const tbillBalance = toNumber(userReads?.[1]?.result, 18);
-    const rpUsdcBalance = toNumber(userReads?.[2]?.result, 18);
+    // rpUSDC is minted/burned in USDC base units (6 dp) in this deployment.
+    const rpUsdcBalance = toNumber(userReads?.[2]?.result, RPUSDC_DECIMALS);
 
     const lenderTuple = userReads?.[3]?.result;
     const sharesRaw = lenderTuple?.[0] ?? 0n;
@@ -337,7 +343,7 @@ export function useProtocolData(address) {
       usdcBalance,
       tbillBalance,
       rpUsdcBalance,
-      lenderShares: toNumber(sharesRaw, 18),
+      lenderShares: toNumber(sharesRaw, RPUSDC_DECIMALS),
       lenderValue,
       repos: userRepos,
     };
@@ -348,10 +354,13 @@ export function useProtocolData(address) {
     const now = new Date();
     const stamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const ts = now.getTime();
-    const userLoanExposure = user.repos.reduce((acc, row) => acc + row.loan, 0);
-    const netWorth = user.usdcBalance + user.lenderValue + (user.tbillBalance * stats.oraclePrice) - userLoanExposure;
-    const ltv0 = user.repos[0]?.ltv ?? 0;
-    const ltv1 = user.repos[1]?.ltv ?? 0;
+    const activeLiabilities = user.repos
+      .filter((row) => row.isActive)
+      .reduce((acc, row) => acc + row.totalOwed, 0);
+    const netWorth = user.usdcBalance + user.lenderValue + (user.tbillBalance * stats.oraclePrice) - activeLiabilities;
+    const activeRepos = user.repos.filter((row) => row.isActive);
+    const ltv0 = activeRepos[0] ? Number(activeRepos[0].ltv.toFixed(2)) : null;
+    const ltv1 = activeRepos[1] ? Number(activeRepos[1].ltv.toFixed(2)) : null;
 
     setHistory((prev) => ({
       poolLiquidity: pushPoint(prev.poolLiquidity, {
@@ -383,8 +392,8 @@ export function useProtocolData(address) {
       ltv: pushPoint(prev.ltv, {
         ts,
         time: stamp,
-        repo0: Number(ltv0.toFixed(2)),
-        repo1: Number(ltv1.toFixed(2)),
+        repo0: ltv0,
+        repo1: ltv1,
       }),
     }));
   }, [

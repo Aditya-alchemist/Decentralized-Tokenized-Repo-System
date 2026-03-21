@@ -1,6 +1,19 @@
 import { erc20Abi } from 'viem';
 import { encodeFunctionData } from 'viem';
 
+function getFallbackReason(error) {
+  const short = String(error?.shortMessage || '').toLowerCase();
+  const full = String(error?.message || '').toLowerCase();
+  const text = `${short} ${full}`;
+
+  if (text.includes('user rejected')) return 'user rejected wallet batch request';
+  if (text.includes('method not found')) return 'wallet does not support batched RPC';
+  if (text.includes('invalid parameters')) return 'wallet rejected batch parameters';
+  if (text.includes('capabilities')) return 'wallet capability check unavailable';
+
+  return 'wallet batching unavailable';
+}
+
 export async function detectWalletBatchSupport(walletClient, chainId) {
   if (!walletClient || !walletClient.account || !chainId) {
     return {
@@ -77,40 +90,40 @@ export async function approveAndExecute({
   ];
 
   try {
-    if (!walletClient || !chainId) {
-      throw new Error('No wallet send-calls support available');
-    }
-
-    const calls = contracts.map((c) => ({
-      to: c.address,
-      data: encodeFunctionData({
-        abi: c.abi,
-        functionName: c.functionName,
-        args: c.args,
-      }),
-    }));
-
-    await walletClient.request({
-      method: 'wallet_sendCalls',
-      params: [
-        {
-          chainId: `0x${chainId.toString(16)}`,
-          from: walletClient.account.address,
-          calls,
-        },
-      ],
-    });
-
-    return { mode: 'multicall', hash: null, fallbackReason: null };
-  } catch (error) {
-    const fallbackReason = error?.shortMessage || error?.message || 'wallet_sendCalls failed';
-
+    console.log('Starting transaction sequence...');
+    console.log('Approve contract:', contracts[0].address);
+    console.log('Action contract:', contracts[1].address);
+    
+    // Use sequential transactions directly - more reliable than batch
+    console.log('Sending approve tx...');
     const approveHash = await writeContractAsync(contracts[0]);
-    await publicClient.waitForTransactionReceipt({ hash: approveHash });
+    console.log('Approve tx sent:', approveHash);
+    
+    console.log('Waiting for approve confirmation...');
+    await publicClient.waitForTransactionReceipt({ 
+      hash: approveHash,
+      timeout: 90000,
+      pollingInterval: 2000,
+    });
+    console.log('Approve tx confirmed');
 
+    console.log('Sending action tx...');
     const actionHash = await writeContractAsync(contracts[1]);
-    await publicClient.waitForTransactionReceipt({ hash: actionHash });
+    console.log('Action tx sent:', actionHash);
+    
+    console.log('Waiting for action confirmation...');
+    await publicClient.waitForTransactionReceipt({ 
+      hash: actionHash,
+      timeout: 90000,
+      pollingInterval: 2000,
+    });
+    console.log('Action tx confirmed');
 
-    return { mode: 'sequential', hash: actionHash, fallbackReason };
+    return { mode: 'sequential', hash: actionHash, fallbackReason: null };
+  } catch (error) {
+    console.error('Transaction failed:', error);
+    console.error('Error message:', error?.message);
+    console.error('Error short:', error?.shortMessage);
+    throw error;
   }
 }

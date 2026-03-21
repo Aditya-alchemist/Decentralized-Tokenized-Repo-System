@@ -22,13 +22,15 @@ import {
   useWalletClient,
   useWriteContract,
 } from 'wagmi';
-import toast, { ToastBar, Toaster } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import toast, { Toaster } from 'react-hot-toast';
 import { CONTRACTS, SYSTEM_STATUS } from './config/contracts';
 import { useProtocolData } from './hooks/useProtocolData';
 import { approveAndExecute, detectWalletBatchSupport } from './utils/txHelpers';
 import './App.css';
 
 const ADMIN_ADDRESS = (process.env.REACT_APP_ADMIN_ADDRESS || '').toLowerCase();
+const RPUSDC_DECIMALS = 6;
 
 function usd(value) {
   return new Intl.NumberFormat('en-US', {
@@ -62,6 +64,25 @@ function formatChartTick(value) {
   if (!value) return '';
   const d = new Date(value);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+
+
+function compactErrorMessage(err, fallback = 'Transaction failed') {
+  const raw = String(err?.shortMessage || err?.message || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return fallback;
+
+  const lower = raw.toLowerCase();
+  if (lower.includes('transaction gas limit too high')) {
+    return 'Wallet gas limit is above Sepolia block cap. Reset wallet gas settings and retry.';
+  }
+
+  const reason = raw.match(/reason:\s*([^()]+?)(?:\(|$)/i);
+  if (reason?.[1]) {
+    return reason[1].trim();
+  }
+
+  return raw.length > 150 ? `${raw.slice(0, 147)}...` : raw;
 }
 
 function normalizeSeries(arr = []) {
@@ -254,7 +275,13 @@ function LendPage({ stats, charts, user, onDeposit, onWithdraw }) {
         <div className="form-grid">
           <div className="mini-panel">
             <h3>Deposit USDC</h3>
+            <p className="hint">
+              Wallet Balance: <strong>{usd(user.usdcBalance)}</strong>
+            </p>
             <input value={deposit} onChange={(e) => setDeposit(e.target.value)} placeholder="Amount" />
+            <button className="retro-btn" onClick={() => setDeposit(user.usdcBalance.toFixed(2))}>
+              Use Max
+            </button>
             <button className="retro-btn" onClick={() => onDeposit(deposit)}>
               Approve + Deposit
             </button>
@@ -309,6 +336,9 @@ function BorrowPage({ stats, charts, repos, onOpenRepo, onRepayRepo, onMeetMargi
   const [loan, setLoan] = useState('5000');
   const estCollateral = Number(collateral || 0) * stats.oraclePrice;
   const estMaxLoan = estCollateral * 0.7;
+  const loanAmount = Number(loan || 0);
+  const liveLTV = estCollateral > 0 ? (loanAmount / estCollateral) * 100 : 0;
+  const ltvToneClass = ltvTone(liveLTV);
 
   return (
     <section className="split-grid">
@@ -329,6 +359,7 @@ function BorrowPage({ stats, charts, repos, onOpenRepo, onRepayRepo, onMeetMargi
           <li><span>Est. Collateral Value</span><strong>{usd(estCollateral)}</strong></li>
           <li><span>Est. Max Loan (70%)</span><strong>{usd(estMaxLoan)}</strong></li>
           <li><span>Interest Rate</span><strong>{stats.defaultRatePct.toFixed(2)}%</strong></li>
+          <li><span>Live LTV</span><strong className={`ltv-${ltvToneClass}`}>{liveLTV.toFixed(2)}%</strong></li>
         </ul>
 
         <button className="retro-btn" onClick={() => onOpenRepo(collateral, loan)}>
@@ -363,10 +394,10 @@ function BorrowPage({ stats, charts, repos, onOpenRepo, onRepayRepo, onMeetMargi
             <LineChart data={charts.ltv}>
               <CartesianGrid strokeDasharray="3 3" stroke="#d8d2c4" />
               <XAxis dataKey="ts" stroke="#2d2a26" tickFormatter={formatChartTick} minTickGap={40} />
-              <YAxis stroke="#2d2a26" />
+              <YAxis stroke="#2d2a26" domain={[0, 100]} />
               <Tooltip labelFormatter={formatChartTick} />
-              <Line type="monotone" dataKey="repo0" stroke="#14b8ff" strokeWidth={3} dot={false} activeDot={{ r: 5 }} animationDuration={900} />
-              <Line type="monotone" dataKey="repo1" stroke="#f952a8" strokeWidth={3} dot={false} activeDot={{ r: 5 }} animationDuration={1150} />
+              <Line type="monotone" dataKey="repo0" stroke="#14b8ff" strokeWidth={3} dot={false} connectNulls={false} activeDot={{ r: 5 }} animationDuration={900} />
+              <Line type="monotone" dataKey="repo1" stroke="#f952a8" strokeWidth={3} dot={false} connectNulls={false} activeDot={{ r: 5 }} animationDuration={1150} />
             </LineChart>
           </ResponsiveContainer>
         </ChartShell>
@@ -376,7 +407,7 @@ function BorrowPage({ stats, charts, repos, onOpenRepo, onRepayRepo, onMeetMargi
             <AreaChart data={charts.oraclePrice}>
               <CartesianGrid strokeDasharray="3 3" stroke="#d8d2c4" />
               <XAxis dataKey="ts" stroke="#2d2a26" tickFormatter={formatChartTick} minTickGap={40} />
-              <YAxis stroke="#2d2a26" />
+              <YAxis stroke="#2d2a26" domain={['dataMin - 2', 'dataMax + 2']} />
               <Tooltip labelFormatter={formatChartTick} />
               <Area type="monotone" dataKey="price" stroke="#ff9d1a" fill="#ffd089" fillOpacity={0.65} animationDuration={1200} />
             </AreaChart>
@@ -387,9 +418,15 @@ function BorrowPage({ stats, charts, repos, onOpenRepo, onRepayRepo, onMeetMargi
   );
 }
 
-function PortfolioPage({ address, user, charts }) {
-  const userLoanExposure = user.repos.reduce((acc, row) => acc + row.loan, 0);
-  const netWorth = user.usdcBalance + user.lenderValue + user.tbillBalance - userLoanExposure;
+function PortfolioPage({ address, user, charts, oraclePrice }) {
+  const tbillMarkedValue = user.tbillBalance * oraclePrice;
+  const activeLiabilities = user.repos
+    .filter((row) => row.isActive)
+    .reduce((acc, row) => acc + row.totalOwed, 0);
+  const netWorth = user.usdcBalance + user.lenderValue + tbillMarkedValue - activeLiabilities;
+  const repoHistory = useMemo(() => [...user.repos].sort((a, b) => b.id - a.id), [user.repos]);
+  const activeTrades = repoHistory.filter((repo) => repo.isActive).length;
+  const closedTrades = repoHistory.length - activeTrades;
 
   return (
     <section className="split-grid">
@@ -400,6 +437,8 @@ function PortfolioPage({ address, user, charts }) {
         <ul className="kv-list">
           <li><span>USDC</span><strong>{usd(user.usdcBalance)}</strong></li>
           <li><span>tTBILL</span><strong>{user.tbillBalance.toFixed(4)} tokens</strong></li>
+          <li><span>tTBILL Mark Price</span><strong>{usd(oraclePrice)} / token</strong></li>
+          <li><span>tTBILL USD Value</span><strong>{usd(tbillMarkedValue)}</strong></li>
           <li><span>rpUSDC</span><strong>{user.rpUsdcBalance.toFixed(4)} shares</strong></li>
         </ul>
 
@@ -407,26 +446,54 @@ function PortfolioPage({ address, user, charts }) {
         <ul className="kv-list">
           <li><span>Shares</span><strong>{user.lenderShares.toFixed(4)}</strong></li>
           <li><span>Current Value</span><strong>{usd(user.lenderValue)}</strong></li>
-          <li><span>Portfolio Net Worth</span><strong>{usd(netWorth)}</strong></li>
+          <li><span>Active Liabilities</span><strong>{usd(activeLiabilities)}</strong></li>
+          <li><span>Portfolio Net Worth (USD)</span><strong>{usd(netWorth)}</strong></li>
         </ul>
 
         <h3 className="section-title">Borrow Positions</h3>
         <div className="history-list">
-          {user.repos.length === 0 && <p>No active repos</p>}
-          {user.repos.map((repo) => (
-            <p key={repo.id}>Repo #{repo.id} | Loan {usd(repo.loan)} | LTV {repo.ltv.toFixed(2)}%</p>
+          {user.repos.length === 0 && <p>No borrow positions yet</p>}
+          {repoHistory.map((repo) => (
+            <article key={repo.id} className="history-row">
+              <p>Repo #{repo.id} | Loan {usd(repo.loan)} | LTV {repo.ltv.toFixed(2)}%</p>
+              <p>
+                Status: <strong>{repo.isActive ? 'Active' : 'Closed'}</strong>
+                {repo.marginCallActive ? ' (Margin call active)' : ''}
+              </p>
+            </article>
+          ))}
+        </div>
+
+        <h3 className="section-title">Repo Trading History</h3>
+        <div className="history-list">
+          <p>
+            Total Trades: <strong>{repoHistory.length}</strong> | Active: <strong>{activeTrades}</strong> | Closed:{' '}
+            <strong>{closedTrades}</strong>
+          </p>
+
+          {repoHistory.length === 0 && <p>No repo trade history yet</p>}
+
+          {repoHistory.map((repo) => (
+            <article key={`portfolio-history-${repo.id}`} className="history-row">
+              <h4>Repo #{repo.id}</h4>
+              <p>Loan: {usd(repo.loan)} | Collateral: {repo.collateral.toFixed(4)} tTBILL</p>
+              <p>Total Owed: {usd(repo.totalOwed)} | LTV: {repo.ltv.toFixed(2)}%</p>
+              <p>Status: {repo.isActive ? 'Active' : 'Closed'}{repo.marginCallActive ? ' (Margin call active)' : ''}</p>
+              <p>Opened: {formatRepoDate(repo.openedAt)} ({timeAgo(repo.openedAt)})</p>
+              <p>Maturity: {formatRepoDate(repo.maturityDate)} | Term: {repo.termDays || 0} days</p>
+            </article>
           ))}
         </div>
       </article>
 
       <article className="panel">
-        <ChartShell title="Net Worth Over Time" subtitle="Live wallet + protocol exposure">
+        <ChartShell title="Net Worth Over Time" subtitle="USD mark-to-market (wallet + protocol exposure)">
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={charts.netWorth}>
               <CartesianGrid strokeDasharray="3 3" stroke="#d8d2c4" />
               <XAxis dataKey="ts" stroke="#2d2a26" tickFormatter={formatChartTick} minTickGap={40} />
-              <YAxis stroke="#2d2a26" />
-              <Tooltip labelFormatter={formatChartTick} />
+              <YAxis stroke="#2d2a26" tickFormatter={(v) => usd(Number(v))} />
+              <Tooltip labelFormatter={formatChartTick} formatter={(v) => usd(Number(v))} />
               <Area type="monotone" dataKey="value" stroke="#ff9d1a" fill="#ffd089" fillOpacity={0.65} animationDuration={1200} />
             </AreaChart>
           </ResponsiveContainer>
@@ -442,6 +509,8 @@ function AdminPage({
   onManualOracleUpdate,
   onMintUsdc,
   onMintTbill,
+  onGrantKycUsdc,
+  onGrantKycTbill,
   batchSupport,
   onRunWalletDiagnostics,
   globalRepos,
@@ -450,6 +519,7 @@ function AdminPage({
   const [mintAddress, setMintAddress] = useState('');
   const [usdcAmount, setUsdcAmount] = useState('10000');
   const [tbillAmount, setTbillAmount] = useState('10');
+  const [kycAddress, setKycAddress] = useState('');
 
   const borrowerHealth = useMemo(() => {
     const byBorrower = new Map();
@@ -527,6 +597,20 @@ function AdminPage({
       </article>
 
       <article className="panel">
+        <h2>KYC Management</h2>
+        <p>Grant KYC verification to wallets before they can receive tokens.</p>
+        <input value={kycAddress} onChange={(e) => setKycAddress(e.target.value)} placeholder="Wallet address to KYC verify" />
+        <div className="mint-grid">
+          <button className="retro-btn" onClick={() => onGrantKycUsdc(kycAddress)}>
+            Grant KYC (USDC)
+          </button>
+          <button className="retro-btn alt" onClick={() => onGrantKycTbill(kycAddress)}>
+            Grant KYC (tTBILL)
+          </button>
+        </div>
+      </article>
+
+      <article className="panel">
         <h2>System Status</h2>
         <ul className="status-list">
           {SYSTEM_STATUS.map((item) => (
@@ -591,6 +675,7 @@ function AdminPage({
 }
 
 function App() {
+  const queryClient = useQueryClient();
   const { address, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
@@ -676,12 +761,8 @@ function App() {
         args: [amount],
       });
       setLastTxMode(result.mode);
-
-      toast.success(
-        result.mode === 'multicall'
-          ? 'Deposit sent via single-confirmation batched flow'
-          : `Deposit completed via fallback flow (${result.fallbackReason || 'wallet send-calls unavailable'})`
-      );
+      await queryClient.invalidateQueries();
+      toast.success('Deposit completed on-chain');
     } catch (err) {
       toast.error(err?.shortMessage || err?.message || 'Deposit failed');
     }
@@ -690,7 +771,7 @@ function App() {
   const handleWithdraw = async (sharesInput) => {
     if (!requireWallet()) return;
     try {
-      const shares = parseUnits(String(sharesInput || '0'), 18);
+      const shares = parseUnits(String(sharesInput || '0'), RPUSDC_DECIMALS);
       if (shares <= 0n) throw new Error('Invalid shares');
       const hash = await writeContractAsync({
         address: CONTRACTS.lendingPool.address,
@@ -699,6 +780,7 @@ function App() {
         args: [shares],
       });
       await publicClient.waitForTransactionReceipt({ hash });
+      await queryClient.invalidateQueries();
       toast.success('Withdraw successful');
     } catch (err) {
       toast.error(err?.shortMessage || err?.message || 'Withdraw failed');
@@ -726,12 +808,8 @@ function App() {
         args: [collateral, loan],
       });
       setLastTxMode(result.mode);
-
-      toast.success(
-        result.mode === 'multicall'
-          ? 'Repo request sent via single-confirmation batched flow'
-          : `Repo opened via fallback flow (${result.fallbackReason || 'wallet send-calls unavailable'})`
-      );
+      await queryClient.invalidateQueries();
+      toast.success('Repo opened on-chain');
     } catch (err) {
       toast.error(err?.shortMessage || err?.message || 'Open repo failed');
     }
@@ -754,11 +832,12 @@ function App() {
         args: [repoId],
       });
       setLastTxMode(result.mode);
+      await queryClient.invalidateQueries();
 
       toast.success(
         result.mode === 'multicall'
           ? `Repay for Repo #${repoId} sent via single-confirmation batched flow`
-          : `Repay for Repo #${repoId} completed via fallback flow (${result.fallbackReason || 'wallet send-calls unavailable'})`
+          : `Repay for Repo #${repoId} completed via two-step flow (${result.fallbackReason || 'wallet batching unavailable'})`
       );
     } catch (err) {
       toast.error(err?.shortMessage || err?.message || `Repay failed for Repo #${repoId}`);
@@ -785,11 +864,12 @@ function App() {
         args: [repoId, collateral],
       });
       setLastTxMode(result.mode);
+      await queryClient.invalidateQueries();
 
       toast.success(
         result.mode === 'multicall'
           ? `Meet margin for Repo #${repoId} sent via single-confirmation batched flow`
-          : `Meet margin for Repo #${repoId} completed via fallback flow (${result.fallbackReason || 'wallet send-calls unavailable'})`
+          : `Meet margin for Repo #${repoId} completed via two-step flow (${result.fallbackReason || 'wallet batching unavailable'})`
       );
     } catch (err) {
       toast.error(err?.shortMessage || err?.message || 'Meet margin call failed');
@@ -834,16 +914,33 @@ function App() {
       const amount = parseUnits(String(amountInput || '0'), 6);
       if (amount <= 0n) throw new Error('Invalid USDC amount');
 
+      let gas;
+      try {
+        const estimated = await publicClient.estimateContractGas({
+          account: address,
+          address: CONTRACTS.mockUsdc.address,
+          abi: CONTRACTS.mockUsdc.abi,
+          functionName: 'mint',
+          args: [to, amount],
+        });
+        gas = (estimated * 12n) / 10n;
+        const networkCap = 16_000_000n;
+        if (gas > networkCap) gas = networkCap;
+      } catch {
+        gas = undefined;
+      }
+
       const hash = await writeContractAsync({
         address: CONTRACTS.mockUsdc.address,
         abi: CONTRACTS.mockUsdc.abi,
         functionName: 'mint',
         args: [to, amount],
+        ...(gas ? { gas } : {}),
       });
       await publicClient.waitForTransactionReceipt({ hash });
       toast.success('USDC minted successfully');
     } catch (err) {
-      toast.error(err?.shortMessage || err?.message || 'Mint USDC failed');
+      toast.error(compactErrorMessage(err, 'Mint USDC failed'));
     }
   };
 
@@ -854,22 +951,79 @@ function App() {
       const amount = parseUnits(String(amountInput || '0'), 18);
       if (amount <= 0n) throw new Error('Invalid tTBILL amount');
 
+      let gas;
+      try {
+        const estimated = await publicClient.estimateContractGas({
+          account: address,
+          address: CONTRACTS.mockTbill.address,
+          abi: CONTRACTS.mockTbill.abi,
+          functionName: 'mint',
+          args: [to, amount],
+        });
+        gas = (estimated * 12n) / 10n;
+        const networkCap = 16_000_000n;
+        if (gas > networkCap) gas = networkCap;
+      } catch {
+        gas = undefined;
+      }
+
       const hash = await writeContractAsync({
         address: CONTRACTS.mockTbill.address,
         abi: CONTRACTS.mockTbill.abi,
         functionName: 'mint',
         args: [to, amount],
+        ...(gas ? { gas } : {}),
       });
       await publicClient.waitForTransactionReceipt({ hash });
       toast.success('tTBILL minted successfully');
     } catch (err) {
-      toast.error(err?.shortMessage || err?.message || 'Mint tTBILL failed');
+      toast.error(compactErrorMessage(err, 'Mint tTBILL failed'));
+    }
+  };
+
+  const handleGrantKycUsdc = async (kycAddress) => {
+    if (!requireWallet()) return;
+    try {
+      if (!kycAddress || kycAddress.length < 40) throw new Error('Invalid recipient address');
+
+      const hash = await writeContractAsync({
+        address: CONTRACTS.mockUsdc.address,
+        abi: CONTRACTS.mockUsdc.abi,
+        functionName: 'grantKYC',
+        args: [kycAddress],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      toast.success(`KYC granted for USDC to ${shortAddress(kycAddress)}`);
+    } catch (err) {
+      toast.error(compactErrorMessage(err, 'Grant KYC (USDC) failed'));
+    }
+  };
+
+  const handleGrantKycTbill = async (kycAddress) => {
+    if (!requireWallet()) return;
+    try {
+      if (!kycAddress || kycAddress.length < 40) throw new Error('Invalid recipient address');
+
+      const hash = await writeContractAsync({
+        address: CONTRACTS.mockTbill.address,
+        abi: CONTRACTS.mockTbill.abi,
+        functionName: 'grantKYC',
+        args: [kycAddress],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      toast.success(`KYC granted for tTBILL to ${shortAddress(kycAddress)}`);
+    } catch (err) {
+      toast.error(compactErrorMessage(err, 'Grant KYC (tTBILL) failed'));
     }
   };
 
   return (
     <div className="app-root">
-      <Header isAdmin={isAdmin} batchSupport={batchSupport} lastTxMode={lastTxMode} />
+      <Header
+        isAdmin={isAdmin}
+        batchSupport={batchSupport}
+        lastTxMode={lastTxMode}
+      />
       <main className="page-shell">
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -891,7 +1045,7 @@ function App() {
               />
             }
           />
-          <Route path="/portfolio" element={<PortfolioPage address={address} user={user} charts={displayCharts} />} />
+          <Route path="/portfolio" element={<PortfolioPage address={address} user={user} charts={displayCharts} oraclePrice={stats.oraclePrice} />} />
           <Route
             path="/admin"
             element={
@@ -901,6 +1055,8 @@ function App() {
                 onManualOracleUpdate={handleManualOracleUpdate}
                 onMintUsdc={handleMintUsdc}
                 onMintTbill={handleMintTbill}
+                onGrantKycUsdc={handleGrantKycUsdc}
+                onGrantKycTbill={handleGrantKycTbill}
                 batchSupport={batchSupport}
                 onRunWalletDiagnostics={handleRunWalletDiagnostics}
                 globalRepos={globalRepos}
@@ -936,31 +1092,38 @@ function App() {
 
       <Toaster
         position="bottom-right"
+        containerStyle={{ zIndex: 99999, right: 16, bottom: 16 }}
         toastOptions={{
-          duration: 4500,
+          duration: 3600,
           style: {
-            border: '3px solid #1f1d1a',
-            borderRadius: '14px',
-            background: '#fffbe6',
-            color: '#1f1d1a',
+            border: 'none',
+            borderRadius: '0',
+            background: 'transparent',
+            color: 'inherit',
             fontFamily: 'VT323, monospace',
-            fontSize: '24px',
-            padding: '10px 12px',
+            fontSize: '16px',
+            lineHeight: '1.2',
+            maxWidth: '380px',
+            padding: 0,
+            boxShadow: 'none',
           },
         }}
       >
         {(t) => (
-          <ToastBar toast={t}>
-            {({ icon, message }) => (
-              <div className="toast-row">
-                <span>{icon}</span>
-                <span className="toast-message">{message}</span>
-                <button className="toast-close" onClick={() => toast.dismiss(t.id)}>
-                  x
-                </button>
-              </div>
-            )}
-          </ToastBar>
+          <div className={`toast-row ${t.type === 'error' ? 'toast-error' : 'toast-success'}`}>
+            <span className="toast-message">{t.message}</span>
+            <button 
+              type="button"
+              className="toast-close" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toast.dismiss(t.id);
+              }}
+            >
+              ×
+            </button>
+          </div>
         )}
       </Toaster>
     </div>

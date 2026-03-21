@@ -8,3 +8,17 @@
 2026-03-21 20:56:51,521 | INFO | Fetched FRED DTB4WK yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T15:26:51Z -> price_8dp=99717666667
 2026-03-21 20:56:59,454 | INFO | Oracle updated. tx_hash=8a73a1a62917beb0cca779bdccc533e4a201ca28957695f1c2b84b182096c793 (change_bps=64.7534, threshold=10, stale_floor_hit=True)
 2026-03-21 20:57:12,101 | INFO | Margin check executed. tx_hash=43d6a3246f81513e77fe7dd2a650dcf179e8854ec6ff78806dfa9a5f9a234ede active_repos=[0] healthy=1 margin_calls=0 liquidations=0
+2026-03-22 00:56:58,552 | INFO | Fetched FRED DTB4WK (secondary=DTB4WK) yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T19:26:58Z -> price_8dp=99717666667
+2026-03-22 00:56:58,767 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-22 00:56:59,155 | INFO | No active repos found. Margin check skipped.
+2026-03-22 01:00:46,983 | INFO | Fetched FRED DTB4WK (secondary=DTB4WK) yield=3.6300% as_of=2026-03-19 fetched_at=2026-03-21T19:30:46Z -> price_8dp=99717666667
+2026-03-22 01:00:47,217 | INFO | Oracle update skipped (change_bps=0.0000, threshold=10, stale_floor_hit=False)
+2026-03-22 01:00:47,912 | INFO | No active repos found. Margin check skipped.
+2026-03-22 01:04:38,321 | INFO | Fetched FRED DTB3 (secondary=DTB4WK) yield=3.6235% as_of=2026-03-19 fetched_at=2026-03-21T19:34:38Z -> base_price_8dp=99718172222
+2026-03-22 01:04:41,209 | INFO | Smoothed target oracle price_8dp=99717995278 (yield=3.6258%)
+2026-03-22 01:04:41,429 | INFO | Oracle update skipped (change_bps=0.0330, threshold=2, stale_floor_hit=False)
+2026-03-22 01:04:41,840 | INFO | No active repos found. Margin check skipped.
+2026-03-22 01:05:00,307 | INFO | Fetched FRED DTB3 (secondary=DTB4WK) yield=3.6235% as_of=2026-03-19 fetched_at=2026-03-21T19:35:00Z -> base_price_8dp=99718172222
+2026-03-22 01:05:03,164 | INFO | Smoothed target oracle price_8dp=99717995278 (yield=3.6258%)
+2026-03-22 01:05:03,355 | INFO | Oracle update skipped (change_bps=0.0330, threshold=2, stale_floor_hit=False)
+2026-03-22 01:05:03,757 | INFO | No active repos found. Margin check skipped.

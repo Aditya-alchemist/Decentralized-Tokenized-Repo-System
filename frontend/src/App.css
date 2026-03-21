@@ -103,6 +103,18 @@
   flex-wrap: nowrap;
 }
 
+.native-balance-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid #111;
+  border-radius: 999px;
+  padding: 0.2rem 0.52rem;
+  font-size: 0.7rem;
+  background: #d9fff2;
+  color: #111;
+  white-space: nowrap;
+}
+
 .status-strip {
   grid-area: status;
   display: flex;
@@ -241,6 +253,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
+  margin-bottom: 0.55rem;
 }
 
 .home-feature-card {
@@ -248,7 +261,7 @@
 }
 
 .home-feature-tag {
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.75rem;
   display: inline-block;
   padding: 0.14rem 0.42rem;
   border: 1px solid #111;
@@ -257,7 +270,7 @@
 }
 
 .home-feature-card h3 {
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.65rem;
   font-size: 1rem;
 }
 
@@ -428,6 +441,10 @@ a.retro-btn {
 .repo-card.warn { box-shadow: inset 4px 0 0 #df9d24; }
 .repo-card.danger { box-shadow: inset 4px 0 0 #d04f4f; }
 
+.ltv-safe { color: #37b157; font-weight: bold; }
+.ltv-warn { color: #df9d24; font-weight: bold; }
+.ltv-danger { color: #d04f4f; font-weight: bold; }
+
 .repo-card h4,
 .repo-card p {
   margin: 0.2rem 0;
@@ -493,24 +510,63 @@ a.retro-btn {
 
 .toast-row {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 0.55rem;
   width: 100%;
+  max-width: 380px;
+  border: 3px solid #1f1d1a;
+  border-radius: 2px;
+  background: #fffbe6;
+  color: #1f1d1a;
+  padding: 8px 10px;
+  box-shadow: 0 2px 0 #1f1d1a;
 }
 
 .toast-message {
   flex: 1;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+  text-decoration: none;
 }
 
 .toast-close {
   border: 2px solid #111;
   background: #ffd2d2;
   color: #111;
-  border-radius: 999px;
-  width: 24px;
-  height: 24px;
+  border-radius: 2px;
+  width: 22px;
+  height: 22px;
   line-height: 1;
   cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.2s;
+}
+
+.toast-close:hover {
+  background: #ff9999;
+}
+
+.toast-close:active {
+  background: #ff7777;
+}
+
+.toast-error {
+  border-color: #5a1818;
+  background: #fff3ea;
+}
+
+.toast-success {
+  border-color: #1f1d1a;
+  background: #eefbea;
 }
 
 .site-footer {
@@ -650,6 +706,10 @@ a.retro-btn {
     justify-content: flex-start;
     overflow-x: auto;
     padding-bottom: 0.15rem;
+  }
+
+  .native-balance-pill {
+    font-size: 0.66rem;
   }
 
   .status-pill {

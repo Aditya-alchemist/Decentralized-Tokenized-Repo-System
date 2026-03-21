@@ -1,3 +1,6 @@
+import time
+from urllib.parse import urlparse
+
 from web3 import Web3
 
 try:
@@ -33,10 +36,29 @@ ORACLE_ABI = [
 class OracleUpdater:
     def __init__(self, config: KeeperConfig) -> None:
         self.config = config
-        self.w3 = Web3(Web3.HTTPProvider(config.rpc_url))
+        retries = max(1, int(config.rpc_connect_retries))
+        delay = max(0, int(config.rpc_connect_retry_delay_seconds))
+        timeout = max(1, int(config.rpc_request_timeout_seconds))
+        endpoints = [config.rpc_url, *config.backup_rpc_urls]
 
-        if not self.w3.is_connected():
-            raise ConnectionError("Failed to connect to RPC endpoint")
+        self.w3 = None
+        for endpoint in endpoints:
+            parsed = urlparse(endpoint)
+            endpoint_label = f"{parsed.scheme}://{parsed.hostname or 'unknown'}"
+            w3 = Web3(Web3.HTTPProvider(endpoint, request_kwargs={"timeout": timeout}))
+            for attempt in range(1, retries + 1):
+                if w3.is_connected():
+                    self.w3 = w3
+                    break
+                if attempt < retries and delay > 0:
+                    time.sleep(delay)
+            if self.w3 is not None:
+                break
+
+        if self.w3 is None:
+            raise ConnectionError(
+                f"Failed to connect to any RPC endpoint after {retries} attempts each"
+            )
 
         self.account = self.w3.eth.account.from_key(config.private_key)
         self.oracle = self.w3.eth.contract(

@@ -1,1085 +1,737 @@
-# Decentralized Tokenized Repo System
+<img width="1408" height="768" alt="Gemini_Generated_Image_wjhe54wjhe54wjhe" src="https://github.com/user-attachments/assets/a22d9f2b-fbc5-41f8-be2e-18b3d311d17b" />
 
-An end-to-end protocol for on-chain repo lending using tokenized T-Bill collateral, with lender share accounting, atomic settlement, automated risk checks, and a live frontend dashboard. This repository combines three layers in one place:
+<div align="center">
 
-1. Smart contracts for collateralized lending and liquidation workflows.
-2. A React dApp for lenders, borrowers, and admin operators.
-3. A Python keeper and risk engine for oracle updates and margin monitoring.
+# 🏛️ Wall Street Repo
+### Tokenized Repo System on Ethereum
 
-The result is a full-stack reference implementation of a modern repo desk where core lifecycle events (deposit, borrow, repay, margin call, liquidation) are verifiable on-chain.
+*An end-to-end on-chain repurchase agreement protocol using tokenized U.S. Treasury Bills as collateral — built for DeFi, inspired by Wall Street.*
 
-## Table of Contents
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.20-363636?style=for-the-badge&logo=solidity)](https://soliditylang.org)
+[![Foundry](https://img.shields.io/badge/Foundry-latest-FF6B35?style=for-the-badge)](https://getfoundry.sh)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python)](https://python.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
+[![Network](https://img.shields.io/badge/Network-Sepolia-9B59B6?style=for-the-badge)](https://sepolia.etherscan.io)
+[![License](https://img.shields.io/badge/License-MIT-2ECC71?style=for-the-badge)](LICENSE)
 
-1. Project Vision
-2. Why This Protocol Exists
-3. Architecture Overview
-4. System Components
-5. Core Contract Design
-6. Repo Lifecycle
-7. Risk Management Model
-8. Protocol Math Reference
-9. Oracle and Keeper Flow
-10. Frontend Application
-11. Repository Structure
-12. Local Setup
-13. Contract Deployment and Seeding
-14. Running the Frontend
-15. Running the Keeper Bot
-16. Testing Strategy
-17. Data, Notebooks, and Quant Modules
-18. Current Limitations and Known Gaps
-19. Security and Operational Notes
-20. Recommended Production Hardening
-21. Contributing
+---
 
-## Project Vision
+> 📦 **Smart Contracts** · 🖥️ **React dApp** · 🤖 **Python Keeper Bot** · 📊 **Quant Risk Engine**
 
-Traditional repo markets rely on centralized intermediaries, fragmented collateral systems, delayed settlement windows, and opaque operational controls. This project explores what happens when you recreate the repo market primitive in a programmable stack:
+[Contracts](#-contracts) · [Architecture](#-architecture) · [Math](#-protocol-math-reference) · [Setup](#-local-setup) · [Frontend](#-frontend) · [Keeper Bot](#-keeper-bot) · [Tests](#-testing)
 
-- Collateral exists as a transferable token.
-- Loan accounting and lender shares are deterministic.
-- Delivery-versus-payment is enforced at transaction level.
-- Margin surveillance is objective and on a fixed ruleset.
-- End users can inspect state directly from contracts.
+</div>
 
-At a conceptual level, this repository is both:
+---
 
-- A practical prototype you can run end-to-end.
-- A design thesis for how fixed-income rails can be made transparent and automated.
+## 💡 What is a Repo?
 
-## Why This Protocol Exists
+A **Repurchase Agreement (repo)** is the backbone of global fixed-income markets.
+Every day, **trillions of dollars** flow between banks, hedge funds, and central banks via repos.
 
-In a repo transaction, a borrower receives cash today and posts high-quality collateral. They later repay cash plus interest and reclaim collateral. The key operational risks in conventional systems are:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  Party A owns $1,000,000 in U.S. Treasury Bills            │
+│                                                             │
+│  TODAY:    Party A sells T-Bills to Party B for $980,000   │
+│  TOMORROW: Party A buys them back for $980,100             │
+│                                                             │
+│  That $100 difference = repo interest (the borrowing cost) │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- Settlement risk: one leg of a trade settles while the other leg fails or is delayed.
-- Counterparty risk amplification: collateral values move before risk desks can react.
-- Operational lag: manual checks, fragmented systems, and delayed reconciliation.
+**The problems in traditional repo:**
+- ⏳ Settlement risk — one leg settles, the other fails
+- 📋 Counterparty risk — collateral moves before risk desks react
+- 🏦 Operational lag — manual checks, fragmented systems, delayed reconciliation
 
-This codebase addresses those with clear mechanisms:
+**This protocol fixes all three:**
+- ✅ Atomic DVP via `RepoSettlement` — both legs or neither
+- ✅ Deterministic LTV monitoring in `MarginEngine`
+- ✅ Automated keeper bot — runs every 30 minutes, no human needed
 
-- Atomic DVP via `RepoSettlement`.
-- Deterministic LTV monitoring in `MarginEngine`.
-- Programmatic margin call and liquidation flow in `RepoVault`.
-- Automated off-chain keeper cycle that updates oracle state and checks active repos.
+---
 
-## Architecture Overview
+## 🔭 Project Overview
 
-The architecture below mirrors the shared system diagram and captures contract responsibilities and directional flow.
+Wall Street Repo is a **full-stack DeFi protocol** for institutional-grade repo lending.
+
+| Layer | What It Does |
+|---|---|
+| 🟩 Smart Contracts | Collateral locking, loan accounting, margin calls, liquidation |
+| 🖥️ React Frontend | Lend, borrow, repay, monitor — with live charts and multi-wallet |
+| 🤖 Python Keeper | Oracle price updates from FRED API + automated margin checks |
+| 📊 Quant Engine | Yield curves, haircut models, VaR stress analysis (expanding) |
+
+### Key Protocol Parameters
+
+| Parameter | Value |
+|---|---|
+| Max LTV at open | 70% (500 bps haircut) |
+| Margin call threshold | 90% LTV |
+| Liquidation threshold | 95% LTV |
+| Margin call window | 4 hours |
+| Interest convention | ACT/360 |
+| Oracle update frequency | Every 5 minutes |
+| Collateral token | tTBILL — ERC1400, KYC-gated, 18 decimals |
+| Loan token | USDC — ERC20, 6 decimals |
+| LP share token | rpUSDC — ERC20, 6 decimals |
+
+---
+
+## 📐 Architecture
+
+<img width="747" height="793" alt="image" src="https://github.com/user-attachments/assets/78e339c7-0b2c-493d-a1f7-bd73fc847e46" />
+
 
 ```mermaid
 flowchart TB
-		U[USERS<br/>Lender | Borrower]
+    U["👤 USERS
+    Lender | Borrower"]
 
-		LP[LendingPool<br/>- mints/burns rpUSDC shares<br/>- tracks totalLoaned<br/>- sharePrice grows with interest]
+    LP["🟩 LendingPool
+    ──────────────────
+    -  accepts USDC deposits
+    -  mints / burns rpUSDC shares
+    -  tracks totalLoaned
+    -  sharePrice grows with interest
+    -  routes repo requests to RepoVault"]
 
-		RV[RepoVault<br/>- locks tTBILL collateral<br/>- stores RepoPositions<br/>- handles repay + margin calls]
+    RV["🟧 RepoVault
+    ──────────────────
+    -  locks tTBILL collateral
+    -  stores all RepoPositions
+    -  disburses USDC loans
+    -  handles repayment flow
+    -  margin call state machine"]
 
-		ME[MarginEngine<br/>- monitors LTV<br/>- triggers margin calls and liquidation]
+    ME["🟪 MarginEngine
+    ──────────────────
+    -  reads oracle price
+    -  computes LTV per repo
+    -  calls issueMarginCall()
+    -  calls liquidate()
+    -  checks expired deadlines"]
 
-		RS[RepoSettlement<br/>- atomic DVP<br/>- tTBILL <-> USDC settlement legs]
+    RS["🟥 RepoSettlement
+    ──────────────────
+    -  atomic DVP settlement
+    -  tTBILL ↔ USDC swap
+    -  all-or-nothing execution"]
 
-		OR[BondPriceOracle<br/>- stores latest tTBILL price<br/>- owner-updated by keeper bot]
+    OR["🟦 BondPriceOracle
+    ──────────────────
+    -  stores tTBILL price (8dp)
+    -  staleness safety halt
+    -  updated by keeper bot"]
 
-		KB[Python Keeper Bot<br/>every cycle: fetch yield -> push oracle -> check repos]
+    BOT["🤖 Python Keeper Bot
+    ──────────────────
+    -  fetches FRED API yield
+    -  computes tTBILL price
+    -  pushes → BondPriceOracle
+    -  calls checkRepos() every 30min"]
 
-		U -->|deposit()| LP
-		U -->|requestRepo()| LP
-		LP -->|openRepo()| RV
-		RV -->|createTicket()/executeSettlement()| RS
-		RV -->|issueMarginCall()/liquidate()| ME
-		ME -->|read price| OR
-		KB -->|updatePrice()| OR
-		KB -->|checkRepos()| ME
+    U -->|deposit USDC| LP
+    U -->|requestRepo| LP
+    LP -->|openRepo| RV
+    RV -->|issueMarginCall / liquidate| ME
+    RV -->|createTicket / executeSettlement| RS
+    ME --> OR
+    BOT --> OR
+    BOT --> ME
 ```
 
-### Layered View
+### Layered Architecture
 
 ```mermaid
 flowchart LR
-		subgraph UX[User Layer]
-				FE[React dApp]
-				W[Wallet / Signer]
-		end
+    subgraph UX["🖥️ User Layer"]
+        FE[React dApp]
+        W[Wallet / Signer]
+    end
 
-		subgraph CHAIN[On-chain Layer]
-				LP2[LendingPool]
-				RV2[RepoVault]
-				RS2[RepoSettlement]
-				ME2[MarginEngine]
-				OR2[BondPriceOracle]
-				TB[tTBILL Token]
-				US[MockUSDC Token]
-				RP[rpUSDC Token]
-		end
+    subgraph CHAIN["⛓️ On-chain Layer"]
+        LP2[LendingPool]
+        RV2[RepoVault]
+        RS2[RepoSettlement]
+        ME2[MarginEngine]
+        OR2[BondPriceOracle]
+        TB[tTBILL Token]
+        US[MockUSDC Token]
+        RP[rpUSDC Token]
+    end
 
-		subgraph OFFCHAIN[Off-chain Automation]
-				KP[Keeper Bot]
-				FD[FRED Yield Feed]
-		end
+    subgraph OFFCHAIN["🤖 Off-chain Automation"]
+        KP[Keeper Bot]
+        FD[FRED Yield Feed]
+    end
 
-		FE --> W
-		W --> LP2
-		W --> RV2
-		W --> OR2
-
-		LP2 --> RP
-		LP2 --> RV2
-		RV2 --> RS2
-		RV2 --> TB
-		LP2 --> US
-		RS2 --> US
-		ME2 --> RV2
-		ME2 --> OR2
-
-		FD --> KP
-		KP --> OR2
-		KP --> ME2
+    FE --> W --> LP2
+    W --> RV2
+    LP2 --> RP
+    LP2 --> RV2
+    RV2 --> RS2
+    RV2 --> TB
+    LP2 --> US
+    ME2 --> RV2
+    ME2 --> OR2
+    FD --> KP --> OR2
+    KP --> ME2
 ```
 
-## System Components
+---
 
-### Smart Contract Domain
+## 📦 Contracts
 
-1. `LendingPool`
-- Accepts USDC deposits from lenders.
-- Mints and burns `rpUSDC` shares.
-- Issues repo loans to borrowers.
-- Tracks `totalLoaned` to keep pool accounting correct.
-- Receives repayment/liquidation credits from `RepoVault`.
+| Contract | Address (Sepolia) | Role |
+|---|---|---|
+| 🪙 MockTBill (tTBILL) | `0x7B2a668e288bc8f668B709ac5558B851Cf54B113` | ERC1400 tokenized T-Bill, KYC-gated |
+| 💵 MockUSDC | `0x38C56C2E22D316249BdCF8C521FEF65d5D8573b8` | Cash token, 6 decimals |
+| 📊 RepoPoolToken (rpUSDC) | `0x90e48C8116b69dA6A2f353940A85829c3997aD65` | LP share token |
+| 🔮 BondPriceOracle | `0xACc9099c4e9f797f1b96559007BB2a0E0A20368A` | On-chain price feed |
+| 🏦 RepoVault | `0x2175633Fd0bd9D172ee36A6755e8F6A99301a347` | Collateral + position manager |
+| 🏊 LendingPool | `0x3786c0952F33814A96F57a1Ee75c265E5F80e247` | USDC pool + share accounting |
+| ⚙️ MarginEngine | `0x206e609B5CB8bf43FFD1ac1723bFFBd71cb99267` | LTV monitor + liquidator |
+| 🔄 RepoSettlement | `0x14038cB88dc2CB86A40e1f0B79E5898aAacc1935` | Atomic DVP settlement |
 
-2. `RepoVault`
-- Stores the canonical repo positions (`RepoPosition`).
-- Pulls and locks borrower tTBILL collateral.
-- Handles repayment workflow and collateral return.
-- Handles margin calls and liquidation state transitions.
+---
 
-3. `MarginEngine`
-- Evaluates LTV using live oracle prices.
-- Triggers margin calls at threshold breach.
-- Triggers liquidations on critical breach or expired margin call.
-
-4. `RepoSettlement`
-- Creates settlement tickets.
-- Executes atomic DVP for repayment settlement.
-- Ensures two-leg transfer is all-or-nothing.
-
-5. `BondPriceOracle`
-- Stores last pushed tTBILL price (8 decimals).
-- Rejects stale reads beyond configured threshold.
-- Is written by the owner account (keeper operator).
-
-6. Tokens
-- `MockTBill`: KYC-gated ERC20-like collateral token (18 decimals).
-- `MockUSDC`: mocked cash token using the same `MockTBill` contract pattern.
-- `RepoPoolToken` (`rpUSDC`): lender share token, mint/burn restricted to pool.
-
-### Frontend Domain
-
-The frontend is a React app with Wagmi/Web3Modal integration and has pages for:
-
-- Dashboard: protocol metrics and charts.
-- Lend: deposit and withdraw workflows.
-- Borrow: open repo, repay, and margin top-up actions.
-- Portfolio: wallet balances plus position history.
-- Admin: oracle update, minting, KYC granting, diagnostics.
-
-The UI polls live contract data and maintains chart history in local storage for continuity across reloads.
-
-### Keeper and Risk Domain
-
-`risk_engine/keeper` provides production-style automation loops:
-
-- Reads FRED yield data.
-- Converts yield to implied T-Bill price.
-- Smooths updates to reduce oracle noise.
-- Pushes on-chain price when threshold logic indicates.
-- Executes `MarginEngine.checkRepos` over active repos.
-- Decodes emitted events to classify healthy, margin call, and liquidation outcomes.
-
-## Core Contract Design
-
-### `LendingPool`: Share-Accounting Core
-
-Key ideas:
-
-- Lenders receive `rpUSDC` shares when they deposit.
-- Shares represent proportional claim on `totalPoolValue`.
-- `sharePrice` rises when interest enters pool and supply is fixed.
-
-Formula concepts:
-
-- `totalPoolValue = USDC.balanceOf(pool) + totalLoaned`
-- `sharePrice = totalPoolValue / totalShareSupply` (scaled to 6 decimals)
-- Deposit share minting and withdrawal redemption are proportional transformations.
-
-This gives the protocol an LP-token style accounting model for fixed income.
-
-### `RepoVault`: Position Registry + Lifecycle Control
-
-Each repo stores borrower, collateral amount, loan amount, pricing terms, maturity, and margin state.
-
-The vault performs:
-
-- LTV validation during open.
-- Collateral lock/unlock.
-- Repayment closure via DVP.
-- Margin-call issuance and satisfaction.
-- Liquidation closure and proceeds distribution.
-
-The vault is intentionally central in control flow so repo state transitions are auditable from one source of truth.
-
-### `MarginEngine`: Mechanical Risk Desk
-
-Current thresholds:
-
-- Margin call at 90% LTV.
-- Liquidation at 95% LTV.
-
-Behavior:
-
-- If margin call is active and expired, liquidate.
-- Else if critical LTV reached, liquidate immediately.
-- Else if warning LTV reached, issue margin call.
-- Else emit healthy status.
-
-This deterministic state machine removes subjective intervention and creates reproducible risk actions.
-
-### `RepoSettlement`: Atomic Delivery-vs-Payment
-
-Repayment uses a ticketed settlement model:
-
-1. Create ticket with seller, buyer, bond amount, cash amount, expiry.
-2. Execute settlement: bond leg then cash leg in same transaction.
-3. If cash leg fails, EVM reverts entire tx, including bond leg.
-
-This eliminates asynchronous settlement gap risk common in traditional markets.
-
-### `BondPriceOracle`: Freshness Gate
-
-The oracle refuses stale values using `stalePriceThreshold`, creating a protective fail-close behavior during keeper outages. Contracts that rely on price reads inherit this safety gate naturally.
-
-### `RepoMath`: Financial Math Utility
-
-The math library encapsulates:
-
-- Max loan after haircut.
-- ACT/360 repo interest.
-- Current LTV in basis points.
-- Safety check against haircut constraints.
-- Liquidation split between lender, borrower, and penalty.
-- Decimal-safe collateral value conversion to USDC units.
-
-Isolating these calculations helps consistency between contracts.
-
-## Repo Lifecycle
-
-### Lifecycle Sequence
+## 🔄 Repo Lifecycle
 
 ```mermaid
 sequenceDiagram
-		participant L as Lender
-		participant B as Borrower
-		participant LP as LendingPool
-		participant RV as RepoVault
-		participant RS as RepoSettlement
-		participant OR as BondPriceOracle
-		participant ME as MarginEngine
+    participant L as 🧑 Lender
+    participant B as 🧑 Borrower
+    participant LP as 🟩 LendingPool
+    participant RV as 🟧 RepoVault
+    participant RS as 🟥 RepoSettlement
+    participant ME as 🟪 MarginEngine
+    participant OR as 🟦 Oracle
+    participant KB as 🤖 KeeperBot
 
-		L->>LP: deposit(USDC)
-		LP-->>L: mint rpUSDC
+    L->>LP: deposit(50,000 USDC)
+    LP-->>L: mint 50,000 rpUSDC shares
 
-		B->>LP: requestRepo(collateral, loan)
-		LP->>B: transfer loan USDC
-		LP->>RV: openRepo(...)
-		RV->>RV: lock tTBILL collateral
+    B->>LP: requestRepo(10 tTBILL, 5,000 USDC)
+    LP->>RV: openRepo(borrower, collateral, loan)
+    RV->>RV: lock tTBILL collateral
+    RV-->>B: send 5,000 USDC
 
-		note over OR,ME: Keeper updates oracle and calls checkRepos periodically
-		ME->>RV: issueMarginCall() or liquidate() when needed
+    loop Every 30 minutes
+        KB->>OR: updatePrice(yield → price)
+        KB->>ME: checkRepos([0, 1, 2...])
+        ME->>OR: getPrice()
+    end
 
-		B->>RS: approve USDC for repayment
-		B->>RV: repayRepo(repoId)
-		RV->>RS: createTicket()
-		RV->>RS: executeSettlement()
-		RS-->>B: receive tTBILL back
-		RS-->>LP: receive USDC repayment
-		RV->>LP: receiveRepayment(principal, interest)
+    alt LTV 90–95%
+        ME->>RV: issueMarginCall(repoId)
+        RV-->>B: 4 hour window to top up
+        B->>RV: meetMarginCall(repoId, extra tTBILL)
+    else LTV > 95% OR deadline expired
+        ME->>RV: liquidate(repoId)
+        RV->>LP: repay loan + interest
+        RV-->>B: return surplus if any
+    end
+
+    B->>RV: repayRepo(repoId)
+    RV->>RS: createTicket + executeSettlement
+    RS-->>B: return 10 tTBILL
+    RS-->>LP: return 5,005.35 USDC
+    LP->>LP: sharePrice increases ✅
 ```
 
-### Repayment Path Details
+---
 
-During repayment:
+## ⚙️ Risk Management
 
-- Borrower submits to `RepoVault.repayRepo`.
-- Vault computes `totalOwed = principal + interest`.
-- Vault marks position closed before external calls (CEI pattern).
-- Vault authorizes settlement and executes DVP.
-- LendingPool gets repayment accounting callback (`receiveRepayment`).
+```mermaid
+graph LR
+    A["LTV 0–69%"] -->|Healthy ✅| B["🟢 No Action"]
+    C["LTV 70–89%"] -->|Warning 🟡| D["🟡 Monitor"]
+    E["LTV 90–94%"] -->|Danger 🔴| F["🔴 Margin Call\n4 Hour Window"]
+    G["LTV ≥ 95%"] -->|Critical ☠️| H["☠️ Immediate Liquidation"]
+    F -->|Deadline Expired| H
+    F -->|Borrower Tops Up| B
+```
 
-This is the key place where lender yield accrual is realized.
+---
 
-### Liquidation Path Details
+## 📊 Protocol Math Reference
 
-When liquidating:
+---
 
-- MarginEngine triggers liquidation via vault.
-- Vault computes proceeds from oracle-marked collateral.
-- Split function allocates lender amount, borrower surplus, penalty.
-- Lender amount is transferred to pool and credited.
-- Borrower receives surplus when present.
+### 1️⃣ Pool Accounting and Share Price
 
-This preserves pool solvency model while still giving borrower upside residual in over-collateralized liquidation scenarios.
+```
+totalPoolValue = USDC_balance + totalLoaned
 
-## Risk Management Model
+sharePrice = 1e6                                  (if totalSupply == 0)
+           = (totalPoolValue × 1e6) / totalSupply (otherwise)
+```
 
-Risk policy implemented in contracts today:
+---
 
-- Haircut-based max borrowing at repo open.
-- Continuous LTV checking from fresh price feed.
-- Margin warning zone before critical liquidation zone.
-- Time-bounded response window for borrower recapitalization.
+### 2️⃣ Deposit — USDC to Shares
 
-Quantitatively:
+```
+sharesMinted = usdcAmount                              (first deposit)
+             = (usdcAmount × totalSupply) / totalPoolValue  (otherwise)
+```
 
-- $LTV = loan / collateralValue$
-- Margin call if $LTV >= 90\%$
-- Liquidation if $LTV >= 95\%$ or margin deadline expires
+---
 
-The repo terms (rate, haircut, term) are configurable in pool defaults and can be updated by owner within bounded constraints.
+### 3️⃣ Withdraw — Shares to USDC
 
-## Protocol Math Reference
+```
+usdcOut = (shareAmount × totalPoolValue) / totalSupply
+```
 
-This section consolidates every major formula implemented in the protocol contracts and keeper code.
+---
 
-### Notation and Units
+### 4️⃣ Max Loan (Haircut Model)
 
-- `bps`: basis points, where `10000 bps = 100%`.
-- `USDC`: 6 decimals.
-- `tTBILL`: 18 decimals.
-- `oracle price`: 8 decimals.
-- `rpUSDC`: 6 decimals in this implementation.
-- Repo interest convention: ACT/360 (`DAYS_IN_YEAR = 360`).
+```
+maxLoan = collateralValue × (10000 - haircutBps) / 10000
 
-### 1) Pool Accounting and Share Pricing
+Example at 5% haircut (500 bps):
+  maxLoan = collateralValue × 0.95
+```
 
-From `LendingPool`:
+---
 
-$$
-	ext{totalPoolValue} = \text{USDC balance in pool} + \text{totalLoaned}
-$$
+### 5️⃣ Repo Interest (ACT/360)
 
-$$
-	ext{sharePrice} =
-\begin{cases}
-1e6 & \text{if totalSupply} = 0 \\
-\dfrac{\text{totalPoolValue} \cdot 1e6}{\text{rpUSDC totalSupply}} & \text{otherwise}
-\end{cases}
-$$
+```
+interest  = (principal × repoRateBps × termDays) / (10000 × 360)
+totalOwed = principal + interest
+```
 
-Interpretation:
+---
 
-- `1e6` means initial price of `1.000000 USDC` per share.
-- As interest accumulates in the pool, `totalPoolValue` rises and share price increases.
+### 6️⃣ LTV Calculation
 
-### 2) USDC to Shares Conversion (Deposit)
+```
+LTV_bps = 10000                              (if collateralValue == 0)
+        = (loanAmount × 10000) / collateralValue  (otherwise)
 
-From `_usdcToShares`:
+LTV_%   = LTV_bps / 100
+```
 
-$$
-	ext{sharesMinted} =
-\begin{cases}
-	ext{usdcAmount} & \text{if totalSupply} = 0 \\
-\dfrac{\text{usdcAmount} \cdot \text{totalSupply}}{\text{totalPoolValue}} & \text{otherwise}
-\end{cases}
-$$
+---
 
-This preserves proportional ownership. Depositors entering later receive fewer shares per USDC if share price has already risen.
+### 7️⃣ Oracle Price → USDC Collateral Value
 
-### 3) Shares to USDC Conversion (Withdraw)
+```
+usdcValue = (tokenAmount × bondPrice) / 1e20
 
-From `_sharesToUSDC`:
+Why:
+  tokenAmount  → 18 decimals
+  bondPrice    →  8 decimals
+  product      → 26 decimals
+  ÷ 1e20       →  6 decimals (USDC) ✅
+```
 
-$$
-	ext{usdcOut} =
-\begin{cases}
-0 & \text{if totalSupply} = 0 \\
-\dfrac{\text{shareAmount} \cdot \text{totalPoolValue}}{\text{totalSupply}} & \text{otherwise}
-\end{cases}
-$$
+---
 
-This is the inverse of deposit conversion and realizes lender PnL through higher `totalPoolValue`.
+### 8️⃣ Liquidation Split
 
-### 4) Max Loan Against Collateral (Haircut Model)
-
-From `RepoMath.maxLoanAmount`:
-
-$$
-	ext{maxLoan} = \text{collateralValue} \cdot \frac{10000 - \text{haircutBps}}{10000}
-$$
-
-Example at 5% haircut (`500 bps`):
-
-$$
-	ext{maxLoan} = 0.95 \cdot \text{collateralValue}
-$$
-
-### 5) Repo Interest (ACT/360)
-
-From `RepoMath.repoInterest`:
-
-$$
-	ext{interest} = \frac{\text{principal} \cdot \text{repoRateBps} \cdot \text{termDays}}{10000 \cdot 360}
-$$
-
-Total owed used during repayment:
-
-$$
-	ext{totalOwed} = \text{principal} + \text{interest}
-$$
-
-### 6) LTV and Position Safety
-
-From `RepoMath.currentLTV`:
-
-$$
-	ext{LTV}_{bps} =
-\begin{cases}
-10000 & \text{if collateralValue} = 0 \\
-\dfrac{\text{loanAmount} \cdot 10000}{\text{collateralValue}} & \text{otherwise}
-\end{cases}
-$$
-
-Convert to percent as:
-
-$$
-	ext{LTV}_{\%} = \frac{\text{LTV}_{bps}}{100}
-$$
-
-Safety check in `RepoMath.isSafe` uses required minimum collateral:
-
-$$
-	ext{minCollateral} = \frac{\text{loanAmount} \cdot 10000}{10000 - \text{haircutBps}}
-$$
-
-Position is safe iff:
-
-$$
-	ext{collateralValue} \ge \text{minCollateral}
-$$
-
-### 7) Oracle Price to Collateral Value Conversion
-
-From `RepoMath.bondValueInUSDC` with decimal normalization:
-
-$$
-	ext{usdcValue} = \frac{\text{tokenAmount} \cdot \text{bondPrice}}{1e8 \cdot 1e12}
-$$
-
-Why this works:
-
-- `tokenAmount` has 18 decimals.
-- `bondPrice` has 8 decimals.
-- Product has 26 decimal scale.
-- Divide by `1e8` to remove oracle scale -> 18 decimals.
-- Divide by `1e12` to convert 18-decimal value into 6-decimal USDC.
-
-Equivalent one-liner:
-
-$$
-	ext{usdcValue} = \frac{\text{tokenAmount} \cdot \text{bondPrice}}{1e20}
-$$
-
-### 8) Margin and Liquidation Threshold Logic
-
-From `MarginEngine` default policy:
-
-- Margin call when:
-
-$$
-	ext{LTV}_{bps} \ge 9000
-$$
-
-- Immediate liquidation when:
-
-$$
-	ext{LTV}_{bps} \ge 9500
-$$
-
-- Liquidation also when margin call is active and:
-
-$$
-	ext{block.timestamp} > \text{marginCallDeadline}
-$$
-
-### 9) Liquidation Split Math
-
-From `RepoMath.liquidationSplit`:
-
-Let:
-
-- `saleProceeds`: value realized from collateral.
-- `loanPlusInterest`: debt due to pool.
-- `penaltyBps`: penalty applied to surplus.
-
-Case A: shortfall or exact cover
-
-$$
-	ext{if } saleProceeds \le loanPlusInterest:\quad
-lenderAmount = saleProceeds,\ borrowerSurplus = 0,\ penalty = 0
-$$
-
-Case B: surplus
-
-$$
-surplus = saleProceeds - loanPlusInterest
-$$
-
-$$
-penalty = surplus \cdot \frac{penaltyBps}{10000}
-$$
-
-$$
+```
+surplus         = saleProceeds - loanPlusInterest
+penalty         = surplus × penaltyBps / 10000
 borrowerSurplus = surplus - penalty
-$$
+lenderAmount    = loanPlusInterest + penalty
 
-$$
-lenderAmount = loanPlusInterest + penalty
-$$
+If saleProceeds <= loanPlusInterest:
+  lenderAmount    = saleProceeds
+  borrowerSurplus = 0
+  penalty         = 0
+```
 
-So the lender is made whole first, then captures liquidation penalty, and borrower receives remaining residual value.
+---
 
-### 10) Keeper Feed and Smoothing Math
+### 9️⃣ Keeper — Yield to Price (Bank Discount)
 
-From `risk_engine/keeper/price_feed.py`.
+```
+priceUSD  = faceValue × (1 - (yield% / 100) × (termDays / 360))
+price_8dp = round(priceUSD × 1e8)
 
-#### Yield -> Price
+Example (yield = 3.73%, 91-day T-Bill):
+  priceUSD  = 1000 × (1 - 0.0373 × 91/360)
+            = 1000 × 0.990576
+            = $990.58
+  price_8dp = 99058000000
+```
 
-Bank-discount style conversion:
+---
 
-$$
-annualYield = \frac{annualYieldPercent}{100}
-$$
+### 🔟 Keeper — Oracle Push Decision
 
-$$
-priceUSD = faceValue \cdot \left(1 - annualYield \cdot \frac{termDays}{360}\right)
-$$
+```
+changeBps = |newPrice - oldPrice| × 10000 / oldPrice
 
-$$
-price8dp = round(priceUSD \cdot 1e8)
-$$
+Push oracle update when:
+  changeBps >= priceChangeThresholdBps
+  OR
+  (now - lastUpdated) >= staleUpdateFloorSeconds
+```
 
-#### Inverse Price -> Implied Yield
+---
 
-$$
-priceUSD = \frac{price8dp}{1e8}
-$$
+### 1️⃣1️⃣ Full Worked Example — Open → Repay
 
-$$
-impliedYieldPercent = \left(1 - \frac{priceUSD}{faceValue}\right) \cdot \frac{360}{termDays} \cdot 100
-$$
-
-#### Primary + Secondary Feed Blend
-
-If secondary series is enabled with weight $w \in [0, 1]$:
-
-$$
-targetYield = (1 - w) \cdot primaryYield + w \cdot secondaryYield
-$$
-
-#### Yield Smoothing Against On-chain State
-
-Using smoothing factor $\alpha \in [0, 1]$:
-
-$$
-smoothedYield = \alpha \cdot targetYield + (1 - \alpha) \cdot currentOnchainImpliedYield
-$$
-
-Smoothed yield is then re-converted to `price8dp`.
-
-### 11) Keeper Update Decision Math
-
-Relative change threshold in basis points:
-
-$$
-changeBps = \frac{|newPrice - oldPrice| \cdot 10000}{oldPrice}
-$$
-
-Keeper pushes oracle update when either condition is true:
-
-$$
-changeBps \ge priceChangeThresholdBps
-$$
-
-or
-
-$$
-now - lastUpdated \ge staleUpdateFloorSeconds
-$$
-
-This avoids unnecessary writes while ensuring periodic freshness.
-
-### 12) Quick Worked Example (Open -> Repay)
-
+```
 Given:
-
-- Collateral = `10 tTBILL`
-- Oracle price = `$980` per tTBILL
-- Haircut = `5%` (`500 bps`)
-- Loan = `$5,000`
-- Repo rate = `5.5%` (`550 bps`)
-- Term = `7 days`
+  Collateral    = 10 tTBILL
+  Oracle price  = $980.00
+  Haircut       = 5% (500 bps)
+  Loan          = $5,000
+  Rate          = 5.5% (550 bps)
+  Term          = 7 days
 
 Collateral value:
+  10 × $980 = $9,800
 
-$$
-10 \cdot 980 = 9800\ USD
-$$
-
-Max loan:
-
-$$
-9800 \cdot 0.95 = 9310\ USD
-$$
-
-Loan `$5000` is allowed since `$5000 < $9310`.
+Max loan check:
+  $9,800 × 0.95 = $9,310
+  $5,000 < $9,310 ✅ allowed
 
 Interest:
+  $5,000 × 0.055 × (7/360) = $5.35
 
-$$
-5000 \cdot 0.055 \cdot \frac{7}{360} \approx 5.35
-$$
+Total owed:
+  $5,000 + $5.35 = $5,005.35
 
-Total owed on repay:
+After repayment — new share price:
+  totalPoolValue: $50,000 → $50,005.35
+  sharePrice:     $1.000000 → $1.000107
+  Lender profit:  +$5.35 🟢<img width="1408" height="768" alt="Gemini_Generated_Image_wjhe54wjhe54wjhe" src="https://github.com/user-attachments/assets/d166d4b2-1a82-4971-8484-665947ef2716" />
 
-$$
-5000 + 5.35 = 5005.35\ USD
-$$
+```
 
-When this repayment is credited to pool accounting, lender share price increases because pool value grows while share supply is unchanged.
+---
 
-### 13) Function-to-Formula Mapping (Complete)
+## 🗂️ Repository Structure
 
-This table-style mapping ties every math-bearing function to the exact formula family it implements.
+```
+tokenized-repo-system/
+│
+├── 📁 contracts/
+│   ├── src/
+│   │   ├── core/
+│   │   │   ├── LendingPool.sol       ← USDC pool + share accounting
+│   │   │   ├── RepoVault.sol         ← Collateral vault + lifecycle
+│   │   │   ├── MarginEngine.sol      ← LTV monitor + liquidation engine
+│   │   │   └── RepoSettlement.sol    ← Atomic DVP settlement
+│   │   ├── oracle/
+│   │   │   └── BondPriceOracle.sol   ← Price feed + staleness guard
+│   │   ├── tokens/
+│   │   │   ├── MockTBill.sol         ← ERC1400 KYC-gated T-Bill
+│   │   │   └── RepoPoolToken.sol     ← rpUSDC LP share token
+│   │   └── libraries/
+│   │       └── RepoMath.sol          ← All financial math
+│   ├── test/
+│   │   ├── LendingPool.t.sol
+│   │   ├── RepoVault.t.sol
+│   │   ├── MarginEngine.t.sol
+│   │   └── Liquidation.t.sol
+│   ├── script/
+│   │   ├── Deploy.s.sol
+│   │   ├── Seed.s.sol
+│   │   └── AdminOps.s.sol
+│   └── deployments/addresses.json
+│
+├── 📁 frontend/
+│   └── src/
+│       ├── pages/          Dashboard, Lend, Borrow, Portfolio, Admin
+│       ├── components/     StatCard, RepoCard, LTVBar, Charts
+│       ├── hooks/          useLendingPool, useRepoVault, useOracle
+│       └── constants/      addresses.js, abis.js
+│
+└── 📁 risk_engine/
+    ├── keeper/
+    │   ├── bot.py              ← Main loop
+    │   ├── price_feed.py       ← FRED API + yield→price
+    │   ├── oracle_updater.py   ← Push on-chain via web3.py
+    │   ├── margin_checker.py   ← checkRepos automation
+    │   └── config.py           ← All tuneable parameters
+    ├── pricing/                ← Quant pricing models (expanding)
+    ├── risk/                   ← VaR + stress testing (expanding)
+    └── notebooks/              ← Yield curve + haircut analysis
+```
 
-#### `contracts/src/core/LendingPool.sol`
+---
 
-- `totalPoolValue()`
-	- $pool = cash + totalLoaned$
-- `sharePrice()`
-	- $price = (pool \cdot 1e6) / supply$, with bootstrap $price = 1e6$ when $supply = 0$
-- `_usdcToShares(usdcAmount)`
-	- $shares = usdcAmount$ at bootstrap
-	- Else $shares = (usdcAmount \cdot supply) / pool$
-- `_sharesToUSDC(shareAmount)`
-	- $usdc = (shareAmount \cdot pool) / supply$
+## 🚀 Local Setup
 
-#### `contracts/src/libraries/RepoMath.sol`
+### Prerequisites
 
-- `maxLoanAmount(collateralValue, haircutBps)`
-	- $maxLoan = collateralValue \cdot (10000 - haircutBps)/10000$
-- `repoInterest(principal, repoRateBps, termDays)`
-	- $interest = principal \cdot repoRateBps \cdot termDays / (10000 \cdot 360)$
-- `currentLTV(loanAmount, collateralValue)`
-	- $ltv_{bps} = loanAmount \cdot 10000 / collateralValue$
-- `isSafe(loanAmount, collateralValue, haircutBps)`
-	- $minCollateral = loanAmount \cdot 10000 / (10000 - haircutBps)$
-	- Safe iff $collateralValue \ge minCollateral$
-- `liquidationSplit(saleProceeds, loanPlusInterest, penaltyBps)`
-	- Shortfall branch and surplus branch as defined above
-- `bondValueInUSDC(tokenAmount, bondPrice)`
-	- $usdcValue = tokenAmount \cdot bondPrice / (1e8 \cdot 1e12)$
+```bash
+# 1. Foundry
+curl -L https://foundry.paradigm.xyz | bash && foundryup
+forge --version
 
-#### `contracts/src/core/RepoVault.sol`
+# 2. Node 18+
+node --version
 
-- `openRepo(...)`
-	- Computes `collateralVal` from oracle and `maxLoan` from haircut formula
-	- Enforces $loanAmount \le maxLoan$
-- `repayRepo(repoId)`
-	- Uses $totalOwed = principal + interest$
-- `getTotalOwed(repoId)`
-	- Same identity: $loan + repoInterest$
-- `getCollateralValue(repoId)`
-	- Uses decimal-normalized bond valuation formula
-- `isPositionSafe(repoId)`
-	- Delegates to haircut safety inequality
+# 3. Python 3.10+
+python3 --version
+```
 
-#### `contracts/src/core/MarginEngine.sol`
+### Install Everything
 
-- `checkRepo(repoId)`
-	- Computes $ltv_{bps}$ and compares against 9000/9500 threshold constants
-- `getCurrentLTV(repoId)`
-	- Exposes direct LTV computation
-- `isAtRisk(repoId)`
-	- Boolean predicate: $ltv_{bps} \ge marginCallThresholdBps$
+```bash
+# Contracts
+cd contracts && forge install && forge build
 
-#### `risk_engine/keeper/price_feed.py`
+# Frontend
+cd frontend && npm install
 
-- `yield_to_price_8dp(...)`
-	- Bank-discount conversion from annualized yield to discounted bill price
-- `price_8dp_to_implied_yield_percent(...)`
-	- Inverse conversion from discounted price back to implied annualized yield
-- `get_latest_tbill_price_8dp(...)`
-	- Weighted blend: $target = (1-w) \cdot primary + w \cdot secondary$
-- `get_latest_tbill_price_8dp_smoothed(...)`
-	- EWMA-like blend: $smoothed = \alpha \cdot target + (1-\alpha) \cdot current$
+# Keeper
+cd risk_engine && pip install -r requirements.txt
+```
 
-#### `risk_engine/keeper/bot.py`
+### Environment Variables
 
-- `_relative_change_bps(new, old)`
-	- $changeBps = |new-old| \cdot 10000 / old$
-- Oracle push decision
-	- Push when relative move threshold breached or staleness floor reached
+Create `contracts/.env`:
+```env
+RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
+PRIVATE_KEY=0x...
+ETHERSCAN_API_KEY=...
+FRED_API_KEY=...
+```
 
-#### `risk_engine/keeper/config.py`
+---
 
-Configuration values affecting math paths:
+## 🛠️ Contract Deployment
 
-- `price_change_threshold_bps`
-- `yield_smoothing_alpha`
-- `stale_update_floor_seconds`
-- `tbill_face_value_usd`
-- `tbill_term_days`
-- `secondary_series_weight`
+### 1. Deploy All Contracts
 
-These are not equations themselves but parameterize equation behavior throughout keeper calculations.
+```bash
+cd contracts
 
-## Oracle and Keeper Flow
+forge script script/Deploy.s.sol:Deploy \
+  --rpc-url $RPC_URL \
+  --private-key $PRIVATE_KEY \
+  --broadcast
+
+# What this does:
+# ✅ Deploys all 8 contracts
+# ✅ Wires trusted addresses between contracts
+# ✅ Sets initial oracle price
+# ✅ Grants KYC to protocol contracts
+# ✅ Writes deployments/addresses.json
+```
+
+### 2. Seed Initial State
+
+```bash
+forge script script/Seed.s.sol:Seed \
+  --rpc-url $RPC_URL \
+  --private-key $PRIVATE_KEY \
+  --broadcast
+
+# What this does:
+# ✅ Sets oracle price
+# ✅ Mints demo tTBILL + USDC balances
+# ✅ Deposits lender capital
+# ✅ Opens a sample repo position
+```
+
+### 3. Admin Operations (KYC + Mint)
+
+```bash
+# Grant KYC + mint tokens to a user
+cast send 0x7B2a668e288bc8f668B709ac5558B851Cf54B113 \
+  "grantKYC(address)" <USER_ADDRESS> \
+  --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+
+cast send 0x7B2a668e288bc8f668B709ac5558B851Cf54B113 \
+  "mint(address,uint256)" <USER_ADDRESS> 100000000000000000000 \
+  --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+
+cast send 0x38C56C2E22D316249BdCF8C521FEF65d5D8573b8 \
+  "mint(address,uint256)" <USER_ADDRESS> 10000000000 \
+  --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+```
+
+Or use the script:
+```bash
+forge script script/AdminOps.s.sol --rpc-url $RPC_URL --broadcast
+```
+
+---
+
+## 🖥️ Frontend
+
+```bash
+cd frontend
+npm run dev
+# Open http://localhost:3000
+```
+
+### Pages
+
+| Page | Route | Features |
+|---|---|---|
+| 🏠 Dashboard | `/` | Pool stats, price chart, liquidity chart, pie chart |
+| 💵 Lend | `/lend` | Deposit USDC, withdraw, share price growth chart |
+| 🏦 Borrow | `/borrow` | Open repo, repay, meet margin call, LTV health bar |
+| 👤 Portfolio | `/portfolio` | Balances, positions, PnL, net worth chart |
+| 🔑 Admin | `/admin` | KYC grant, mint tokens, oracle update, diagnostics |
+
+### Wallet Support
+
+Powered by **Web3Modal + Wagmi**:
+
+```
+MetaMask · Coinbase Wallet · WalletConnect
+Rainbow · Trust Wallet · Ledger · Phantom · 300+ more
+```
+
+Get your free WalletConnect Project ID at [cloud.walletconnect.com](https://cloud.walletconnect.com)
+
+### Charts (Recharts)
+
+| Chart | Page |
+|---|---|
+| 📈 tTBILL Price History | Dashboard |
+| 🏊 Pool Liquidity Over Time | Dashboard |
+| 🥧 Pool Composition (available/loaned) | Dashboard |
+| 📈 rpUSDC Share Price Growth | Lend |
+| 📉 LTV History per Repo | Borrow |
+| 💼 Net Worth Over Time | Portfolio |
+
+---
+
+## 🤖 Keeper Bot
+
+```bash
+cd risk_engine/keeper
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# Run once
+python3 bot.py --once
+
+# Run continuously (every 30 min)
+python3 bot.py
+```
 
 ### Keeper Cycle
 
 ```mermaid
 flowchart TD
-		A[Start cycle] --> B[Load config and addresses]
-		B --> C[Fetch FRED yield data]
-		C --> D[Convert yield to 8dp bond price]
-		D --> E[Read on-chain price and last updated]
-		E --> F{Push update?}
-		F -->|Yes| G[submit updatePrice tx]
-		F -->|No| H[skip oracle write]
-		G --> I[Discover active repo IDs]
-		H --> I
-		I --> J[submit checkRepos tx]
-		J --> K[Decode events: healthy / margin / liquidation]
-		K --> L[Log and sleep]
+    A[🟢 Start Cycle] --> B[Load config + addresses]
+    B --> C[Fetch FRED yield data]
+    C --> D[Convert yield → 8dp bond price]
+    D --> E[Read on-chain price + lastUpdated]
+    E --> F{Push update?}
+    F -->|changeBps ≥ threshold\nOR stale floor hit| G[📤 submit updatePrice tx]
+    F -->|No change| H[⏭️ Skip oracle write]
+    G --> I[Scan active repo IDs]
+    H --> I
+    I --> J[📤 submit checkRepos tx]
+    J --> K[Decode events: healthy / margin / liquidation]
+    K --> L[📋 Log results]
+    L --> M[😴 Sleep 30 min]
+    M --> A
 ```
 
-### Data Source Notes
+Sample log output:
+```
+2026-03-21 06:16:03 | INFO | 🤖 Keeper bot started. interval=1800s
+2026-03-21 06:16:05 | INFO | FRED yield=3.73% → price=$990.58
+2026-03-21 06:16:06 | INFO | Oracle update skipped (Δ=0.00bp < threshold=10bp)
+2026-03-21 06:16:11 | INFO | checkRepos( [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/83277269/432123c8-b578-4571-bdeb-7fd0723a5604/paste.txt)) → healthy=2 margin_calls=0 liquidations=0
+```
 
-The keeper uses FRED series IDs from config (primary + optional secondary), blends them, converts to implied T-Bill price, then smooths against current on-chain implied yield to avoid over-reactive updates.
+---
 
-Push policy combines:
-
-- Relative basis-point move threshold.
-- Stale floor timeout forcing periodic refresh.
-
-This balances gas efficiency and freshness reliability.
-
-## Frontend Application
-
-The frontend is not a mock shell; it invokes real contract methods and displays live protocol state.
-
-### Features
-
-1. Wallet connection and chain-aware routing.
-2. Deposit and withdraw flows for lenders.
-3. Open repo and repay flows for borrowers.
-4. Margin call top-up action.
-5. Admin controls for oracle writes, minting, and KYC.
-6. Visualization of liquidity, oracle, LTV, and net-worth history.
-7. Transaction helper that performs approve + action sequentially with explicit diagnostics.
-
-### Data Model in UI
-
-The `useProtocolData` hook performs batched reads over:
-
-- Pool totals and share price.
-- Oracle values.
-- Global repo registry.
-- User-specific balances and positions.
-
-Charts are fed from rolling snapshots persisted in local storage.
-
-## Repository Structure
-
-High-level map:
-
-- `contracts/`
-	- `src/core/`: LendingPool, RepoVault, MarginEngine, RepoSettlement
-	- `src/oracle/`: BondPriceOracle
-	- `src/tokens/`: MockTBill, RepoPoolToken
-	- `src/libraries/`: RepoMath
-	- `script/`: Deploy and Seed scripts
-	- `test/`: Foundry tests for lifecycle, risk, liquidation
-	- `deployments/addresses.json`: deployed contract addresses
-- `frontend/`
-	- React app, Wagmi/Web3Modal setup, chart-driven monitoring UI
-- `risk_engine/`
-	- `keeper/`: off-chain bot for oracle and margin automation
-	- `pricing/`, `risk/`, `stress/`: quant expansion modules (placeholders currently)
-	- `notebooks/`: analysis notebook files
-- `docs/`
-	- architecture/risk docs scaffold (currently minimal)
-
-## Local Setup
-
-### Prerequisites
-
-1. Node.js 18+ and npm.
-2. Foundry toolchain (`forge`, `cast`, `anvil`).
-3. Python 3.10+ and pip.
-4. A Sepolia RPC URL.
-5. Wallet private key for deployment and keeper transactions.
-6. FRED API key (for keeper price feed).
-
-### Install Dependencies
-
-Contracts:
+## 🧪 Testing
 
 ```bash
 cd contracts
-forge install
-forge build
+
+# Run all tests
+forge test -vvvv
+
+# Individual suites
+forge test --match-path test/LendingPool.t.sol -vvvv
+forge test --match-path test/RepoVault.t.sol -vvvv
+forge test --match-path test/MarginEngine.t.sol -vvvv
+forge test --match-path test/Liquidation.t.sol -vvvv
+
+# Single test
+forge test --match-test test_fullLifecycle_depositBorrowRepayWithdraw -vvvv
+
+# Coverage
+forge coverage --ir-minimum
 ```
 
-Frontend:
+### Test Coverage
 
-```bash
-cd frontend
-npm install
+| Suite | Tests | What's Covered |
+|---|---|---|
+| `LendingPool.t.sol` | 10 | Deposit, withdraw, share price, liquidity checks |
+| `RepoVault.t.sol` | 10 | Open, repay, collateral value, LTV safety |
+| `MarginEngine.t.sol` | 8 | Healthy, margin call, liquidation, access control |
+| `Liquidation.t.sol` | 8 | Full liquidation, shortfall, surplus, lifecycle |
+
+---
+
+## 🔐 Security Notes
+
+### Solidity Patterns Used
+
+- ✅ **CEI ordering** — checks-effects-interactions on all state transitions
+- ✅ **ReentrancyGuard** — on all external action methods
+- ✅ **Role-gated admin ops** — owner-only oracle writes, KYC, minting
+- ✅ **Pause controls** — emergency stop mechanism
+- ✅ **One-time wiring guards** — trusted addresses set once at deploy
+- ✅ **Oracle staleness halt** — protocol freezes on stale feed
+
+---
+
+## 🔮 Production Roadmap
+
+| Priority | Upgrade |
+|---|---|
+| 🔴 Critical | Replace MockTBill with regulated RWA: **BlackRock BUIDL**, **Ondo OUSG**, **Franklin BENJI** |
+| 🔴 Critical | Replace FRED keeper with **Chainlink Functions** for decentralised oracle |
+| 🟡 High | Add DEX/RFQ integration for liquidation collateral sale |
+| 🟡 High | Multisig + timelock governance for admin functions |
+| 🟢 Medium | **The Graph** subgraph for event indexing + chart data |
+| 🟢 Medium | Formal invariant + fuzz testing on accounting paths |
+| 🟢 Medium | EIP-2612 permit to remove two-step approve + deposit |
+| 🔵 Future | Full quant modules: haircut calibration, VaR, crisis scenario replay |
+
+---
+
+## 🧠 Concepts Demonstrated
+
+| Concept | Implementation |
+|---|---|
+| Repurchase Agreement | Full open → repay → margin call → liquidation lifecycle |
+| Tokenized RWA | ERC1400 tTBILL with CUSIP `US912796YT68` metadata |
+| KYC-Gated Security Token | ERC1400 transfer restrictions — both parties must be whitelisted |
+| Share-Based Lending Pool | rpUSDC share price grows with interest — like Aave/Compound |
+| Atomic DVP Settlement | RepoSettlement — both legs or neither, zero counterparty risk |
+| Automated Market Risk | MarginEngine + keeper bot replicates a real repo risk desk |
+| On-Chain Price Oracle | BondPriceOracle with staleness safety halt |
+| Bank Discount Yield Formula | FRED yield → T-Bill price → on-chain 8dp representation |
+
+---
+
+<div align="center">
+
+Built by **Aditya Kumar Mishra**
+
+*"If Wall Street ran on Ethereum, it would look something like this."*
+
+[![MIT License](https://img.shields.io/badge/License-MIT-2ECC71?style=for-the-badge)](LICENSE)
+
+</div>
 ```
-
-Keeper:
-
-```bash
-cd risk_engine
-pip install -r requirements.txt
-```
-
-## Contract Deployment and Seeding
-
-Deployment and seeding scripts are in Foundry script format.
-
-### Environment
-
-Set values in `.env` (repo root and/or `contracts/.env`):
-
-- `PRIVATE_KEY`
-- `RPC_URL`
-- `CHAIN_ID` (default often 11155111 for Sepolia)
-
-### Deploy
-
-```bash
-cd contracts
-forge script script/Deploy.s.sol:Deploy \
-	--rpc-url $RPC_URL \
-	--private-key $PRIVATE_KEY \
-	--broadcast
-```
-
-What deploy script does:
-
-1. Deploys `MockTBill`, mocked `USDC`, `rpUSDC`, oracle, core contracts.
-2. Wires trusted addresses between contracts.
-3. Sets initial oracle price.
-4. Grants KYC roles to protocol contracts.
-5. Writes `deployments/addresses.json`.
-
-### Seed
-
-```bash
-cd contracts
-forge script script/Seed.s.sol:Seed \
-	--rpc-url $RPC_URL \
-	--private-key $PRIVATE_KEY \
-	--broadcast
-```
-
-What seed script does:
-
-1. Reads deployed addresses.
-2. Sets oracle reference price.
-3. Ensures KYC grants for deployer and protocol accounts.
-4. Mints demo balances.
-5. Deposits lender capital.
-6. Opens a sample repo position.
-
-## Running the Frontend
-
-### Configure addresses and wallet
-
-Frontend contract addresses are configured in `frontend/src/config/contracts.js` and currently aligned with `contracts/deployments/addresses.json` values.
-
-Set environment variables for frontend:
-
-- `REACT_APP_WALLETCONNECT_PROJECT_ID`
-- `REACT_APP_ADMIN_ADDRESS` (optional override for admin gating)
-
-### Start dev server
-
-```bash
-cd frontend
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-## Running the Keeper Bot
-
-### Keeper environment
-
-Required values:
-
-- `RPC_URL`
-- `PRIVATE_KEY`
-- `FRED_API_KEY`
-- `ADDRESSES_PATH` (optional, defaults to contracts deployment json)
-
-Optional tuning:
-
-- `BOT_INTERVAL_SECONDS`
-- `PRICE_CHANGE_THRESHOLD_BPS`
-- `STALE_UPDATE_FLOOR_SECONDS`
-- `YIELD_SMOOTHING_ALPHA`
-- `BACKUP_RPC_URLS`
-
-### Run once
-
-```bash
-python -m risk_engine.keeper.bot --once
-```
-
-### Run continuously
-
-```bash
-python -m risk_engine.keeper.bot
-```
-
-The bot logs to console and file, retries on failure with configurable backoff, and will skip on-chain writes if RPC is unavailable while still validating data fetch path.
-
-## Testing Strategy
-
-Foundry tests validate major pathways:
-
-1. `LendingPool.t.sol`
-- Deposit and withdraw behavior.
-- Share-price growth after repayment.
-- Liquidity and accounting correctness.
-
-2. `RepoVault.t.sol`
-- Collateral lock, position recording, and repayment closure.
-- LTV guardrails on open.
-- Safety checks under price drops.
-
-3. `MarginEngine.t.sol`
-- Healthy checks.
-- Margin call trigger conditions.
-- Liquidation trigger and deadline-expiry behavior.
-
-4. `Liquidation.t.sol`
-- Lender recovery logic.
-- Borrower surplus scenarios.
-- Shortfall behavior.
-- Full lifecycle integration path.
-
-Run tests:
-
-```bash
-cd contracts
-forge test -vv
-```
-
-## Data, Notebooks, and Quant Modules
-
-`risk_engine/notebooks` includes staged notebooks for:
-
-- Yield curve exploration.
-- Bond pricing.
-- Haircut model simulation.
-- VaR stress analysis.
-- Crisis-period scenario replay.
-
-Current state of code modules:
-
-- `risk_engine/keeper/*`: implemented and operational.
-- `risk_engine/pricing/*`, `risk_engine/risk/*`, `risk_engine/stress/*`: currently scaffolded placeholders to be expanded.
-
-This is intentional and useful: operational safety-critical flow exists in contracts + keeper, while advanced quant analytics can evolve without disturbing deterministic on-chain behavior.
-
-## Current Limitations and Known Gaps
-
-1. Mock assets and permissions
-- Uses mock token contracts and role-based KYC in development context.
-
-2. Liquidation cash realization model
-- Current liquidation flow assumes available USDC liquidity in vault for payout paths.
-- A real collateral sale integration (DEX/RFQ/auction) should be added for production.
-
-3. Oracle centralization
-- Single-writer owner update model.
-- Production should add multi-source aggregation and stronger governance controls.
-
-4. Frontend transaction batching
-- Helper currently executes sequential approve + action path for reliability.
-- Capability probing exists for wallet batch support diagnostics.
-
-5. Quant modules
-- Advanced pricing/risk engines are scaffolded and not yet fully implemented.
-
-## Security and Operational Notes
-
-### Solidity Safety Patterns Used
-
-- CEI ordering in critical state transitions.
-- `ReentrancyGuard` on external action methods.
-- Role/owner-gated administrative operations.
-- Pause controls for emergency stops.
-- One-time wiring guards for trusted addresses.
-
-### Operational Controls
-
-- Oracle staleness threshold creates protocol safety halt on stale feed.
-- Keeper includes fallback RPC support and retry behavior.
-- On-chain events provide risk-action observability.
-
-### Financial Invariant Intent
-
-- Pool value should represent cash plus outstanding principal claims.
-- Interest should accrue to lender share value via repayment accounting.
-- Liquidation proceeds should flow through explicit split logic.
-
-## Recommended Production Hardening
-
-If taking this beyond prototype, prioritize the following:
-
-1. Replace mock collateral cash-out assumptions with deterministic execution venue integration.
-2. Introduce robust oracle architecture (multi feed, medianization, fallback circuits).
-3. Add formal invariant testing and fuzz/property tests around accounting paths.
-4. Add governance timelocks and multisig for sensitive admin functions.
-5. Expand keeper observability with metrics backend and alerting.
-6. Integrate stricter access policy around who can call keeper-exposed pathways.
-7. Add replay-safe idempotency controls in off-chain automation.
-8. Implement and validate full quant modules for haircut/rate calibration.
-
-## Contributing
-
-Contributions are welcome across contracts, frontend UX, and risk modules.
-
-Suggested contribution workflow:
-
-1. Fork and create a feature branch.
-2. Keep changes scoped by layer (contracts/frontend/keeper).
-3. Add or update tests for behavioral changes.
-4. Run Foundry tests and frontend build before PR.
-5. Document config and migration impact in PR notes.
-
-## Final Notes
-
-This repository demonstrates a coherent architecture where:
-
-- Lenders receive tokenized claims on pooled liquidity.
-- Borrowers access collateralized cash via transparent terms.
-- Settlement can be atomic.
-- Risk actions can be rules-based and continuously enforced.
-
-It is intentionally pragmatic: enough implementation to run complete lifecycle flows today, enough scaffold to support serious research and production hardening tomorrow.
-

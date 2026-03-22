@@ -199,3 +199,36 @@ ConnectionError: Failed to connect to RPC endpoint
 2026-03-21 11:09:05,178 | INFO | Smoothed target oracle price_8dp=99717843611 (yield=3.6277%)
 2026-03-21 11:09:05,661 | INFO | Oracle update skipped (change_bps=0.0177, threshold=2, stale_floor_hit=False)
 2026-03-21 11:09:08,118 | INFO | No active repos found. Margin check skipped.
+2026-03-21 11:42:59,201 | INFO | Keeper bot started. interval=300s
+2026-03-21 11:43:00,733 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T20:43:00Z -> base_price_8dp=99717938889
+2026-03-21 11:43:03,088 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 11:43:11,564 | INFO | Oracle updated. tx_hash=1df46c5614b3ab783c1743fc00a11e14a74d9104cb5068f81dc00e216da73ec1 (first write or stale/unknown oracle state)
+2026-03-21 11:43:12,219 | INFO | No active repos found. Margin check skipped.
+2026-03-21 11:48:31,283 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T20:48:31Z -> base_price_8dp=99717938889
+2026-03-21 11:48:34,083 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 11:48:36,356 | INFO | Oracle update skipped (change_bps=0.0000, threshold=2, stale_floor_hit=False)
+2026-03-21 11:48:37,059 | INFO | No active repos found. Margin check skipped.
+2026-03-21 11:53:55,808 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T20:53:55Z -> base_price_8dp=99717938889
+2026-03-21 11:53:58,190 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 11:53:58,566 | INFO | Oracle update skipped (change_bps=0.0000, threshold=2, stale_floor_hit=False)
+2026-03-21 11:53:59,234 | INFO | No active repos found. Margin check skipped.
+2026-03-21 11:59:17,958 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T20:59:17Z -> base_price_8dp=99717938889
+2026-03-21 11:59:20,441 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 11:59:20,802 | INFO | Oracle update skipped (change_bps=0.0000, threshold=2, stale_floor_hit=False)
+2026-03-21 11:59:21,503 | INFO | No active repos found. Margin check skipped.
+2026-03-21 12:04:45,434 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T21:04:45Z -> base_price_8dp=99717938889
+2026-03-21 12:04:47,871 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 12:04:48,217 | INFO | Oracle update skipped (change_bps=0.0000, threshold=2, stale_floor_hit=False)
+2026-03-21 12:04:48,990 | INFO | No active repos found. Margin check skipped.
+2026-03-21 12:10:04,429 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T21:10:04Z -> base_price_8dp=99717938889
+2026-03-21 12:10:07,204 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 12:10:07,592 | INFO | Oracle update skipped (change_bps=0.0000, threshold=2, stale_floor_hit=False)
+2026-03-21 12:10:08,412 | INFO | No active repos found. Margin check skipped.
+2026-03-21 12:15:23,379 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T21:15:23Z -> base_price_8dp=99717938889
+2026-03-21 12:15:25,950 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 12:15:26,318 | INFO | Oracle update skipped (change_bps=0.0000, threshold=2, stale_floor_hit=False)
+2026-03-21 12:15:27,152 | INFO | No active repos found. Margin check skipped.
+2026-03-21 12:20:42,089 | INFO | Fetched FRED DTB4WK (secondary=DTB3) yield=3.6265% as_of=2026-03-19 fetched_at=2026-03-21T21:20:42Z -> base_price_8dp=99717938889
+2026-03-21 12:20:44,864 | INFO | Smoothed target oracle price_8dp=99717938889 (yield=3.6265%)
+2026-03-21 12:20:45,199 | INFO | Oracle update skipped (change_bps=0.0000, threshold=2, stale_floor_hit=False)
+2026-03-21 12:20:45,858 | INFO | No active repos found. Margin check skipped.

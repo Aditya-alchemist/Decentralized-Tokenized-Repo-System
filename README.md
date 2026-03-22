@@ -147,6 +147,13 @@ flowchart TB
     BOT --> ME
 ```
 
+### Working Video
+
+
+https://github.com/user-attachments/assets/185f0d78-00df-4ae7-a260-44fb5285f0ab
+
+
+
 ### Layered Architecture
 
 ```mermaid
@@ -737,4 +744,3 @@ Built by **Aditya Kumar Mishra**
 [![MIT License](https://img.shields.io/badge/License-MIT-2ECC71?style=for-the-badge)](LICENSE)
 
 </div>
-```
